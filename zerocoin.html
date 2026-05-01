@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ゼロ円デー記録</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ゼロ円デー">
+<meta name="theme-color" content="#16a34a">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2316a34a'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='52' font-family='system-ui'%3E%F0%9F%8C%BF%3C/text%3E%3Ctext x='50' y='90' text-anchor='middle' font-size='18' font-weight='900' fill='%23bbf7d0' font-family='system-ui'%3E%C2%A50%3C/text%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #22c55e;
+    --green-light: #bbf7d0;
+    --green-dark: #15803d;
+    --bg: #f0fdf4;
+    --card: #ffffff;
+    --text: #1a2e1a;
+    --muted: #6b7280;
+    --border: #d1fae5;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--green-dark);
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 16px 12px;
+    text-align: center;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .stat-card .num {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--green-dark);
+    line-height: 1;
+  }
+
+  .stat-card .label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+
+  .streak-banner {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: white;
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+  }
+
+  .streak-banner .fire {
+    font-size: 2.4rem;
+  }
+
+  .streak-banner .streak-text {
+    flex: 1;
+  }
+
+  .streak-banner .streak-text strong {
+    font-size: 1.1rem;
+    display: block;
+  }
+
+  .streak-banner .streak-text span {
+    font-size: 0.82rem;
+    opacity: 0.85;
+  }
+
+  .streak-banner .streak-num {
+    font-size: 2.8rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  /* Today button */
+  .today-section {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .today-section h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  .today-date {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .btn-toggle {
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    border: none;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 54px;
+    touch-action: manipulation;
+  }
+
+  .btn-toggle.unchecked {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 2px dashed #d1d5db;
+  }
+
+  .btn-toggle.unchecked:hover {
+    background: #e9fce9;
+    border-color: var(--green);
+    color: var(--green-dark);
+  }
+
+  .btn-toggle.checked {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: white;
+    box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+    transform: scale(1.01);
+  }
+
+  /* Calendar */
+  .calendar-section {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .calendar-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .cal-nav {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .cal-nav button {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+
+  .cal-nav button:hover { background: var(--bg); }
+
+  .cal-month-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .cal-dow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .cal-dow span {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 4px 0;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .cal-cell {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    position: relative;
+    user-select: none;
+  }
+
+  .cal-cell.empty { cursor: default; }
+
+  .cal-cell.other-month {
+    color: #d1d5db;
+    font-weight: 400;
+  }
+
+  .cal-cell:not(.empty):not(.other-month):hover {
+    background: var(--bg);
+    border-color: var(--green-light);
+  }
+
+  .cal-cell.zero-day {
+    background: var(--green-light);
+    color: var(--green-dark);
+    border-color: var(--green);
+  }
+
+  .cal-cell.zero-day::after {
+    content: '¥0';
+    position: absolute;
+    bottom: 2px;
+    font-size: 0.52rem;
+    color: var(--green-dark);
+    font-weight: 700;
+  }
+
+  .cal-cell.today {
+    border-color: var(--green-dark);
+    font-weight: 800;
+  }
+
+  .cal-cell.today:not(.zero-day) {
+    background: #fefce8;
+    border-color: #eab308;
+    color: #713f12;
+  }
+
+  .cal-cell.future {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  /* Badges */
+  .badges-section {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1.5px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+  }
+
+  .badges-section h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .badge {
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    border: 1.5px solid var(--border);
+    transition: all 0.2s;
+  }
+
+  .badge.unlocked {
+    background: linear-gradient(135deg, #fef9c3, #fde68a);
+    border-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.2);
+  }
+
+  .badge.locked {
+    background: #f9fafb;
+    opacity: 0.5;
+    filter: grayscale(1);
+  }
+
+  .badge .badge-icon { font-size: 1.8rem; }
+
+  .badge .badge-name {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-top: 4px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .badge .badge-cond {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a2e1a;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .confetti-wrap {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 998;
+    overflow: hidden;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    animation: fall 1.5s ease-in forwards;
+    top: -10px;
+  }
+
+  @keyframes fall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  .memo-input {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    font-size: 16px; /* prevent iOS auto-zoom */
+    font-family: inherit;
+    resize: none;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .memo-input:focus { border-color: var(--green); }
+
+  .cal-nav button {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌿 ゼロ円デー</h1>
+  <p>お金を使わなかった日を記録して節約を続けよう</p>
+</header>
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="num" id="stat-total">0</div>
+    <div class="label">通算<br>ゼロ円デー</div>
+  </div>
+  <div class="stat-card">
+    <div class="num" id="stat-month">0</div>
+    <div class="label">今月の<br>ゼロ円デー</div>
+  </div>
+  <div class="stat-card">
+    <div class="num" id="stat-best">0</div>
+    <div class="label">最長<br>連続記録</div>
+  </div>
+</div>
+
+<!-- Streak -->
+<div class="streak-banner" id="streak-banner">
+  <div class="fire" id="streak-icon">🔥</div>
+  <div class="streak-text">
+    <strong id="streak-main">現在の連続記録</strong>
+    <span id="streak-sub">今日も記録してみよう！</span>
+  </div>
+  <div class="streak-num" id="streak-num">0</div>
+</div>
+
+<!-- Today -->
+<div class="today-section">
+  <div class="today-date" id="today-date"></div>
+  <button class="btn-toggle unchecked" id="btn-today" onclick="toggleToday()">
+    <span id="btn-icon">＋</span>
+    <span id="btn-text">今日をゼロ円デーに記録する</span>
+  </button>
+  <textarea class="memo-input" id="memo-input" rows="2"
+    placeholder="一言メモ（例：コンビニを素通りできた！）"
+    oninput="saveMemo()"
+    style="display:none"></textarea>
+</div>
+
+<!-- Calendar -->
+<div class="calendar-section">
+  <div class="calendar-header">
+    <h2>📅 カレンダー</h2>
+    <div class="cal-nav">
+      <button onclick="changeMonth(-1)">‹</button>
+      <div class="cal-month-label" id="cal-month-label"></div>
+      <button onclick="changeMonth(1)">›</button>
+    </div>
+  </div>
+  <div class="cal-dow">
+    <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
+
+<!-- Badges -->
+<div class="badges-section">
+  <h2>🏅 バッジ</h2>
+  <div class="badges-grid" id="badges-grid"></div>
+</div>
+
+<!-- iOS Add to Home Screen guide -->
+<div id="ios-guide" style="display:none; background:#fff; border:1.5px solid #d1fae5; border-radius:16px; padding:16px 18px; margin-bottom:20px; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+    <strong style="font-size:0.95rem; color:#15803d;">📲 ホーム画面に追加するには</strong>
+    <button onclick="document.getElementById('ios-guide').style.display='none'" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7280;padding:4px;">✕</button>
+  </div>
+  <ol style="font-size:0.82rem; color:#374151; padding-left:18px; line-height:1.9;">
+    <li>下の <strong>共有ボタン</strong>（□↑）をタップ</li>
+    <li>「<strong>ホーム画面に追加</strong>」を選ぶ</li>
+    <li>右上の「<strong>追加</strong>」をタップ</li>
+  </ol>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="confetti-wrap" id="confetti"></div>
+
+<script>
+const BADGES = [
+  { id: 'first',    icon: '🌱', name: '初めての一歩',   cond: '初回記録',         check: (total, streak, best) => total >= 1 },
+  { id: 'three',    icon: '🌿', name: '3日連続',        cond: '3日連続達成',      check: (total, streak, best) => best >= 3 },
+  { id: 'week',     icon: '⭐', name: '1週間連続',      cond: '7日連続達成',      check: (total, streak, best) => best >= 7 },
+  { id: 'ten',      icon: '💪', name: '10回達成',       cond: '通算10回',         check: (total, streak, best) => total >= 10 },
+  { id: 'fortnight',icon: '🌟', name: '2週間連続',      cond: '14日連続達成',     check: (total, streak, best) => best >= 14 },
+  { id: 'month',    icon: '🏆', name: '30回達成',       cond: '通算30回',         check: (total, streak, best) => total >= 30 },
+  { id: 'super',    icon: '💎', name: '1ヶ月連続',      cond: '30日連続達成',     check: (total, streak, best) => best >= 30 },
+  { id: 'hundred',  icon: '👑', name: '節約王',         cond: '通算100回',        check: (total, streak, best) => total >= 100 },
+  { id: 'halfyear', icon: '🚀', name: '半年連続',       cond: '180日連続達成',    check: (total, streak, best) => best >= 180 },
+];
+
+let data = JSON.parse(localStorage.getItem('zerocoin_v2') || '{"days":{}}');
+let calYear, calMonth;
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function save() {
+  localStorage.setItem('zerocoin_v2', JSON.stringify(data));
+}
+
+function getAllZeroDays() {
+  return Object.keys(data.days).filter(k => data.days[k] && data.days[k].zero).sort();
+}
+
+function calcCurrentStreak() {
+  const days = getAllZeroDays();
+  if (!days.length) return 0;
+  const today = todayKey();
+  let streak = 0;
+  let cur = new Date(today);
+  while (true) {
+    const k = cur.toISOString().slice(0,10);
+    if (days.includes(k)) {
+      streak++;
+      cur.setDate(cur.getDate() - 1);
+    } else break;
+  }
+  return streak;
+}
+
+function calcBestStreak() {
+  const days = getAllZeroDays();
+  if (!days.length) return 0;
+  let best = 1, cur = 1;
+  for (let i = 1; i < days.length; i++) {
+    const prev = new Date(days[i-1]);
+    const curr = new Date(days[i]);
+    const diff = (curr - prev) / 86400000;
+    if (diff === 1) { cur++; best = Math.max(best, cur); }
+    else cur = 1;
+  }
+  return best;
+}
+
+function calcMonthCount() {
+  const now = new Date();
+  const prefix = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  return getAllZeroDays().filter(d => d.startsWith(prefix)).length;
+}
+
+function updateStats() {
+  const total = getAllZeroDays().length;
+  const streak = calcCurrentStreak();
+  const best = Math.max(calcBestStreak(), streak);
+  const month = calcMonthCount();
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-month').textContent = month;
+  document.getElementById('stat-best').textContent = best;
+  document.getElementById('streak-num').textContent = streak;
+
+  const banner = document.getElementById('streak-banner');
+  const icon = document.getElementById('streak-icon');
+  const main = document.getElementById('streak-main');
+  const sub = document.getElementById('streak-sub');
+
+  if (streak === 0) {
+    icon.textContent = '💡';
+    main.textContent = '今日から始めよう！';
+    sub.textContent = '最初の一歩が大事です';
+    banner.style.background = 'linear-gradient(135deg, #6b7280, #9ca3af)';
+  } else if (streak < 3) {
+    icon.textContent = '🌱';
+    main.textContent = '現在の連続記録';
+    sub.textContent = 'いいスタート！続けよう';
+    banner.style.background = 'linear-gradient(135deg, #16a34a, #22c55e)';
+  } else if (streak < 7) {
+    icon.textContent = '🔥';
+    main.textContent = '現在の連続記録';
+    sub.textContent = '調子いいね！この勢いで！';
+    banner.style.background = 'linear-gradient(135deg, #ea580c, #f97316)';
+  } else if (streak < 30) {
+    icon.textContent = '⭐';
+    main.textContent = '現在の連続記録';
+    sub.textContent = '素晴らしい継続力！';
+    banner.style.background = 'linear-gradient(135deg, #7c3aed, #a855f7)';
+  } else {
+    icon.textContent = '👑';
+    main.textContent = '現在の連続記録';
+    sub.textContent = '節約マスター！';
+    banner.style.background = 'linear-gradient(135deg, #b45309, #f59e0b)';
+  }
+
+  updateBadges(total, streak, best);
+}
+
+function updateBadges(total, streak, best) {
+  const grid = document.getElementById('badges-grid');
+  grid.innerHTML = BADGES.map(b => {
+    const unlocked = b.check(total, streak, best);
+    return `<div class="badge ${unlocked ? 'unlocked' : 'locked'}">
+      <div class="badge-icon">${b.icon}</div>
+      <div class="badge-name">${b.name}</div>
+      <div class="badge-cond">${b.cond}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateTodayBtn() {
+  const key = todayKey();
+  const isZero = data.days[key]?.zero;
+  const btn = document.getElementById('btn-today');
+  const memo = document.getElementById('memo-input');
+
+  if (isZero) {
+    btn.className = 'btn-toggle checked';
+    document.getElementById('btn-icon').textContent = '✓';
+    document.getElementById('btn-text').textContent = '今日はゼロ円デー達成！';
+    memo.style.display = 'block';
+    memo.value = data.days[key]?.memo || '';
+  } else {
+    btn.className = 'btn-toggle unchecked';
+    document.getElementById('btn-icon').textContent = '＋';
+    document.getElementById('btn-text').textContent = '今日をゼロ円デーに記録する';
+    memo.style.display = 'none';
+  }
+}
+
+function toggleToday() {
+  const key = todayKey();
+  const wasZero = data.days[key]?.zero;
+  const prevTotal = getAllZeroDays().length;
+  const prevStreak = calcCurrentStreak();
+  const prevBest = Math.max(calcBestStreak(), prevStreak);
+
+  if (wasZero) {
+    data.days[key] = { zero: false };
+    showToast('記録を取り消しました');
+  } else {
+    data.days[key] = { zero: true, memo: '' };
+    launchConfetti();
+
+    // Check newly unlocked badges
+    const newTotal = getAllZeroDays().length;
+    const newStreak = calcCurrentStreak();
+    const newBest = Math.max(calcBestStreak(), newStreak);
+
+    const newBadge = BADGES.find(b =>
+      b.check(newTotal, newStreak, newBest) &&
+      !b.check(prevTotal, prevStreak, prevBest)
+    );
+
+    if (newBadge) {
+      setTimeout(() => showToast(`🏅 バッジ獲得！「${newBadge.name}」`, 3000), 600);
+    } else if (newStreak > 1) {
+      showToast(`🔥 ${newStreak}日連続達成！すごい！`);
+    } else {
+      showToast('✅ 今日もゼロ円デー！えらい！');
+    }
+  }
+
+  save();
+  updateTodayBtn();
+  updateStats();
+  renderCalendar();
+}
+
+function saveMemo() {
+  const key = todayKey();
+  if (data.days[key]?.zero) {
+    data.days[key].memo = document.getElementById('memo-input').value;
+    save();
+  }
+}
+
+function renderCalendar() {
+  const label = document.getElementById('cal-month-label');
+  label.textContent = `${calYear}年${calMonth+1}月`;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  const today = todayKey();
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+
+  // Prev month filler
+  for (let i = 0; i < firstDay; i++) {
+    const d = daysInPrev - firstDay + 1 + i;
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell other-month';
+    cell.textContent = d;
+    grid.appendChild(cell);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = key === today;
+    const isZero = data.days[key]?.zero;
+    const isFuture = key > today;
+
+    const cell = document.createElement('div');
+    let cls = 'cal-cell';
+    if (isZero) cls += ' zero-day';
+    if (isToday) cls += ' today';
+    if (isFuture) cls += ' future';
+    cell.className = cls;
+    cell.textContent = d;
+
+    if (!isFuture && !isToday) {
+      cell.onclick = () => toggleDay(key);
+    }
+
+    grid.appendChild(cell);
+  }
+
+  // Next month filler
+  const total = firstDay + daysInMonth;
+  const remaining = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let i = 1; i <= remaining; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell other-month';
+    cell.textContent = i;
+    grid.appendChild(cell);
+  }
+}
+
+function toggleDay(key) {
+  const was = data.days[key]?.zero;
+  data.days[key] = { zero: !was, memo: data.days[key]?.memo || '' };
+  save();
+  updateStats();
+  renderCalendar();
+  showToast(was ? '記録を取り消しました' : '✅ ゼロ円デーに記録！');
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+
+function showToast(msg, dur = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function launchConfetti() {
+  const wrap = document.getElementById('confetti');
+  wrap.innerHTML = '';
+  const colors = ['#22c55e','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#ef4444'];
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.cssText = `
+      left: ${Math.random()*100}%;
+      background: ${colors[Math.floor(Math.random()*colors.length)]};
+      animation-delay: ${Math.random()*0.6}s;
+      animation-duration: ${1.2 + Math.random()*0.8}s;
+      width: ${6+Math.random()*6}px;
+      height: ${6+Math.random()*6}px;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+    `;
+    wrap.appendChild(p);
+  }
+  setTimeout(() => wrap.innerHTML = '', 2500);
+}
+
+// Init
+(function() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+
+  const opts = { year:'numeric', month:'long', day:'numeric', weekday:'long' };
+  document.getElementById('today-date').textContent =
+    '今日: ' + now.toLocaleDateString('ja-JP', opts);
+
+  updateTodayBtn();
+  updateStats();
+  renderCalendar();
+
+  // iOSのSafariでスタンドアロンでない場合だけガイドを表示
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone;
+  if (isIOS && !isStandalone) {
+    document.getElementById('ios-guide').style.display = 'block';
+  }
+})();
+</script>
+</body>
+</html>
