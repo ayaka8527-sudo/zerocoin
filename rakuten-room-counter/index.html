@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#bf0000">
+<title>楽天ROOM 活動カウンター</title>
+<style>
+  :root{
+    --rakuten:#bf0000;--pink:#ff5b8a;--bg:#fff5f7;--card:#fff;--txt:#33272a;--muted:#9b8c92;
+    --like:#ff5b8a;--follow:#4a9be8;--post:#27ae60;--ok:#27ae60;--warn:#e67e22;--bad:#e74c3c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+    background:var(--bg);color:var(--txt);padding-bottom:40px}
+  header{background:linear-gradient(135deg,var(--rakuten),var(--pink));color:#fff;padding:16px 16px 14px;
+    position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(191,0,0,.25)}
+  header h1{margin:0;font-size:17px;font-weight:800;letter-spacing:.5px}
+  .head-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px}
+  .date{font-size:13px;opacity:.95}
+  .streak{font-size:13px;font-weight:700;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px}
+  .wrap{max-width:520px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 4px 18px rgba(191,0,0,.07)}
+  .card-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .card-head .emoji{font-size:22px}
+  .card-head .title{font-size:16px;font-weight:800}
+  .card-head .badge{margin-left:auto;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .badge.ok{background:#eafaf0;color:var(--ok)}
+  .badge.warn{background:#fff3e6;color:var(--warn)}
+  .badge.bad{background:#fdecea;color:var(--bad)}
+  .progress-num{text-align:center;font-size:13px;color:var(--muted);margin-bottom:8px}
+  .progress-num b{font-size:26px;color:var(--txt);font-weight:900}
+  .meter{height:9px;background:#f0e8eb;border-radius:6px;overflow:hidden;margin:0 0 12px}
+  .meter>span{display:block;height:100%;border-radius:6px;transition:width .3s}
+  .like .meter>span{background:var(--like)}
+  .follow .meter>span{background:var(--follow)}
+  .start-btn{width:100%;border:none;border-radius:14px;padding:18px;font-size:17px;font-weight:900;color:#fff;
+    cursor:pointer;transition:transform .08s,opacity .2s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .start-btn:active{transform:scale(.97)}
+  .start-btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .like .start-btn{background:var(--like)}
+  .follow .start-btn{background:var(--follow)}
+  .post .start-btn,.pbtn.start{background:var(--post)}
+  .stage-list{list-style:none;margin:12px 0 0;padding:0}
+  .stage-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:9px 11px;border-radius:10px;
+    background:#faf3f5;margin-bottom:6px}
+  .stage-item .no{font-weight:800;min-width:46px}
+  .like .stage-item .no{color:var(--like)} .follow .stage-item .no{color:var(--follow)}
+  .stage-item .time{font-weight:700;font-variant-numeric:tabular-nums}
+  .stage-item .tail{margin-left:auto;font-size:12px;font-weight:700}
+  .stage-item.pending{opacity:.45}
+  .stage-item.active{background:#fff3e6}
+  .stage-item .tail.done{color:var(--ok)} .stage-item .tail.wait{color:var(--warn)}
+  .mini-cal{margin-left:6px;border:none;background:#ffe3ec;color:var(--rakuten);border-radius:7px;
+    padding:3px 7px;font-size:12px;font-weight:700;cursor:pointer}
+  .cal-toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;
+    background:#fff7fa;border:1.5px solid #ffd6e2;border-radius:10px;padding:9px 11px}
+  .cal-toggle input{width:18px;height:18px;accent-color:var(--rakuten)}
+  .status-line{font-size:13px;font-weight:700;margin-top:12px;text-align:center;padding:9px;border-radius:10px}
+  .status-line.ok{background:#eafaf0;color:var(--ok)}
+  .status-line.wait{background:#fff3e6;color:var(--warn)}
+  .status-line.done{background:#fdecea;color:var(--bad)}
+  /* posting */
+  .btn-circle{width:62px;height:62px;border-radius:50%;border:none;font-size:30px;font-weight:900;color:#fff;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+  .btn-circle:active{transform:scale(.9)}
+  .post .btn-circle.plus{background:var(--post)} .post .btn-circle.minus{background:#9bd6b3}
+  .counter{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
+  .count-num{font-size:48px;font-weight:900;min-width:110px;text-align:center}
+  .post-actions{display:flex;gap:10px}
+  .pbtn{flex:1;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer}
+  .pbtn:active{transform:scale(.97)} .pbtn.stop{background:var(--rakuten)}
+  .round-now{background:#eafaf0;border-radius:12px;padding:10px;margin-top:6px;font-size:13.5px}
+  .round-now b{font-size:15px}
+  .rounds{list-style:none;margin:8px 0 0;padding:0}
+  .rounds li{font-size:12.5px;padding:8px 10px;border-radius:10px;background:#faf3f5;margin-bottom:6px;
+    display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .rounds .rtag{font-weight:800;color:var(--rakuten)}
+  .totals{display:flex;justify-content:space-around;text-align:center;margin-top:8px}
+  .totals .t-num{font-size:22px;font-weight:900}
+  .totals .t-lab{font-size:11px;color:var(--muted)}
+  .toggle{display:flex;gap:6px;margin-bottom:10px}
+  .toggle button{flex:1;border:1.5px solid var(--pink);background:#fff;color:var(--pink);border-radius:10px;
+    padding:7px;font-size:13px;font-weight:700;cursor:pointer}
+  .toggle button.on{background:var(--pink);color:#fff}
+  canvas{width:100%;height:170px;display:block}
+  .legend{display:flex;gap:14px;justify-content:center;font-size:11.5px;margin-top:6px;color:var(--muted)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .row-btns{display:flex;gap:10px;flex-wrap:wrap}
+  .ghost{flex:1;min-width:120px;border:1.5px solid #e0d3d8;background:#fff;border-radius:12px;padding:11px;
+    font-size:13px;font-weight:700;color:var(--txt);cursor:pointer}
+  .notice{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:6px}
+  .reset-link{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px;background:none;border:none;cursor:pointer;width:100%}
+  .notif-banner{background:#fffbe6;border:1.5px solid #ffe08a;border-radius:12px;padding:11px;font-size:12.5px;
+    display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .notif-banner button{margin-left:auto;background:var(--rakuten);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#33272a;color:#fff;
+    padding:12px 18px;border-radius:30px;font-size:13.5px;font-weight:700;opacity:0;transition:.3s;z-index:100;
+    max-width:90%;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛍️ 楽天ROOM 活動カウンター</h1>
+  <div class="head-row">
+    <span class="date" id="date"></span>
+    <span class="streak" id="streak">🔥 連続0日</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="notif-banner" id="notifBanner" style="display:none">
+    🔔 解除のお知らせを受け取るには通知を許可してください
+    <button onclick="askNotify()">許可する</button>
+  </div>
+
+  <!-- いいね -->
+  <div class="card like">
+    <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
+    <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
+    <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
+    <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
+    <ul class="stage-list" id="likeStages"></ul>
+    <div class="status-line ok" id="likeStatus">開始ボタンを押すと記録スタート</div>
+  </div>
+
+  <!-- フォロー -->
+  <div class="card follow">
+    <div class="card-head"><span class="emoji">👥</span><span class="title">フォロー</span><span class="badge" id="followBadge"></span></div>
+    <div class="progress-num"><b id="followDone">0</b> / 8 回　（100×8＝800）</div>
+    <div class="meter"><span id="followMeter" style="width:0%"></span></div>
+    <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
+    <ul class="stage-list" id="followStages"></ul>
+    <div class="status-line ok" id="followStatus">開始ボタンを押すと記録スタート</div>
+  </div>
+
+  <!-- 投稿 -->
+  <div class="card post">
+    <div class="card-head"><span class="emoji">📝</span><span class="title">投稿</span><span class="badge" id="postBadge"></span></div>
+    <div class="post-actions" id="postIdle">
+      <button class="start-btn" onclick="startPosting()">⏱ 投稿開始</button>
+    </div>
+    <div id="postActive" style="display:none">
+      <div class="round-now">⏱ 開始 <b id="postStartT">--:--</b> ／ 経過 <b id="postElapsed">0分</b></div>
+      <div class="counter">
+        <button class="btn-circle minus" onclick="decPost()">−</button>
+        <span class="count-num" id="postNum">0</span>
+        <button class="btn-circle plus" onclick="incPost()">＋</button>
+      </div>
+      <div class="post-actions"><button class="pbtn stop" onclick="endPosting()">✅ 投稿おわり（記録）</button></div>
+    </div>
+  </div>
+
+  <!-- 今日のラウンド -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">📒</span><span class="title">今日のラウンド</span></div>
+    <ul class="rounds" id="roundsList"></ul>
+    <div class="totals">
+      <div><div class="t-num" style="color:var(--like)" id="todayLike">0</div><div class="t-lab">いいね</div></div>
+      <div><div class="t-num" style="color:var(--follow)" id="todayFollow">0</div><div class="t-lab">フォロー</div></div>
+      <div><div class="t-num" style="color:var(--post)" id="todayPost">0</div><div class="t-lab">投稿</div></div>
+      <div><div class="t-num" id="todayRounds">0</div><div class="t-lab">ラウンド</div></div>
+    </div>
+  </div>
+
+  <!-- グラフ -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">📊</span><span class="title">推移グラフ</span></div>
+    <div class="toggle">
+      <button id="wk7" class="on" onclick="setRange(7)">週（7日）</button>
+      <button id="wk30" onclick="setRange(30)">月（30日）</button>
+    </div>
+    <canvas id="chart"></canvas>
+    <div class="legend">
+      <span><i style="background:var(--like)"></i>いいね</span>
+      <span><i style="background:var(--follow)"></i>フォロー</span>
+      <span><i style="background:var(--post)"></i>投稿</span>
+    </div>
+    <div class="totals" style="margin-top:12px">
+      <div><div class="t-num" style="color:var(--like)" id="cumLike">0</div><div class="t-lab">累計いいね</div></div>
+      <div><div class="t-num" style="color:var(--follow)" id="cumFollow">0</div><div class="t-lab">累計フォロー</div></div>
+      <div><div class="t-num" style="color:var(--post)" id="cumPost">0</div><div class="t-lab">累計投稿</div></div>
+    </div>
+  </div>
+
+  <!-- 設定（カレンダー） -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">📅</span><span class="title">カレンダー通知</span></div>
+    <label class="cal-toggle">
+      <input type="checkbox" id="calToggle" onchange="toggleCal(this)">
+      <span>「開始」を押したら解除時刻のアラームをカレンダーに自動登録する<br>
+      <b style="color:var(--rakuten)">→ アプリを閉じていても解除時刻に通知が鳴ります</b></span>
+    </label>
+    <div class="notice">
+      ・押すたびに「○○:○○ 解除」の予定（アラーム付き）が作られます。<br>
+      ・iPhoneは追加時に「カレンダーに追加」を選択／Androidはカレンダーアプリで開いて保存。<br>
+      ・各回の「📅」ボタンで登録し直し、本日終了後は「📅 登録」でリセット時刻も登録できます。
+    </div>
+  </div>
+
+  <!-- データ -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">💾</span><span class="title">バックアップ</span></div>
+    <div class="row-btns">
+      <button class="ghost" onclick="exportData()">⬇️ エクスポート</button>
+      <button class="ghost" onclick="document.getElementById('importFile').click()">⬆️ インポート</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+    </div>
+    <div class="notice">
+      ・データはこの端末のブラウザ内に自動保存されます。<br>
+      ・通知はアプリ（このページ）を開いている間に届きます。スマホはホーム画面に追加し、活動中は開いておくと確実です。<br>
+      ・機種変更時はエクスポートしたファイルをインポートしてください。
+    </div>
+    <button class="reset-link" onclick="resetAll()">― すべてのデータを消去 ―</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const HOUR=3600000, DAY=86400000;
+const CFG = {
+  like:   { counts:[300,300,200],                    emoji:"❤️", name:"いいね", color:"--like" },
+  follow: { counts:[100,100,100,100,100,100,100,100], emoji:"👥", name:"フォロー", color:"--follow" }
+};
+const KEY="rakuten_room_counter_v3";
+
+let state = load();
+let chartRange = 7;
+
+function blankState(){
+  return {
+    like:   { firstTs:null, stages:[] },   // stages: {startTs, releaseTs, cap, notified}
+    follow: { firstTs:null, stages:[] },
+    posting:{ active:false, startTs:null, count:0 },
+    rounds: [],
+    daily:  {},
+  };
+}
+function load(){
+  try{ const s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.like&&s.like.stages) return s; }catch(e){}
+  return blankState();
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ---------- 日付ユーティリティ ---------- */
+function dateKey(ts){const d=new Date(ts);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function hm(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function dur(ms){const m=Math.max(0,Math.round(ms/60000));return m<60?m+"分":Math.floor(m/60)+"時間"+(m%60)+"分";}
+function countdown(ms){
+  if(ms<=0) return "まもなく";
+  const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
+  if(h>0) return h+"時間"+m+"分"; if(m>0) return m+"分"+ss+"秒"; return ss+"秒";
+}
+const todayKey=()=>dateKey(Date.now());
+
+/* ---------- 上限ロジック（開始ボタン式） ---------- */
+function maybeReset(which){
+  const st=state[which];
+  if(st.firstTs && Date.now()>=st.firstTs+DAY){ st.firstTs=null; st.stages=[]; return true; }
+  return false;
+}
+function press(which){
+  maybeReset(which);
+  const cfg=CFG[which], st=state[which], now=Date.now();
+  const total=cfg.counts.length;
+  if(st.stages.length>=total){ toast("本日は完了です。リセットをお待ちください"); return; }
+  if(st.stages.length>0){
+    const last=st.stages[st.stages.length-1];
+    if(now<last.releaseTs){ toast("まだ解除前です（あと"+countdown(last.releaseTs-now)+"）"); return; }
+  }
+  if(!st.firstTs) st.firstTs=now;
+  const cap=cfg.counts[st.stages.length];
+  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, notified:false });
+  bumpDaily(which==="like"?"likes":"follows", now, +cap);
+  askNotify(true);
+  save(); render();
+  registerStageAlarm(which, st.stages.length-1);
+  toast(cfg.emoji+" "+st.stages.length+"回目スタート！解除は "+hm(now+HOUR));
+}
+function bumpDaily(field,ts,d){
+  const k=dateKey(ts);
+  if(!state.daily[k]) state.daily[k]={likes:0,follows:0,posts:0};
+  state.daily[k][field]=Math.max(0,state.daily[k][field]+d);
+}
+
+/* ---------- 投稿 ---------- */
+function startPosting(){ state.posting={active:true,startTs:Date.now(),count:0}; save(); render(); }
+function incPost(){ if(state.posting.active){state.posting.count++;bumpDaily("posts",Date.now(),+1);save();render();} }
+function decPost(){ if(state.posting.active&&state.posting.count>0){state.posting.count--;bumpDaily("posts",Date.now(),-1);save();render();} }
+function endPosting(){
+  const p=state.posting; if(!p.active) return;
+  state.rounds.push({dateKey:dateKey(p.startTs),startTs:p.startTs,endTs:Date.now(),count:p.count});
+  state.posting={active:false,startTs:null,count:0};
+  toast("ラウンドを記録しました ✅"); save(); render();
+}
+
+/* ---------- カレンダー連携（閉じてても通知） ---------- */
+let calEnabled = localStorage.getItem("rrc_cal")!=="off";
+function icsTime(ms){
+  const d=new Date(ms),p=n=>String(n).padStart(2,"0");
+  return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"T"+p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+"Z";
+}
+function makeICS(title,whenMs,desc){
+  const uid="rrc-"+whenMs+"-"+Math.random().toString(36).slice(2)+"@rakuten-room";
+  return [
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//RakutenRoomCounter//JP","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    "BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+icsTime(Date.now()),
+    "DTSTART:"+icsTime(whenMs),"DTEND:"+icsTime(whenMs+5*60000),
+    "SUMMARY:"+title,"DESCRIPTION:"+(desc||"楽天ROOM 活動カウンター"),
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:-PT0M","END:VALARM",
+    "END:VEVENT","END:VCALENDAR"
+  ].join("\r\n");
+}
+function downloadICS(title,whenMs,desc,fname){
+  const blob=new Blob([makeICS(title,whenMs,desc)],{type:"text/calendar;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=(fname||"解除アラーム")+".ics";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+function alarmTitleFor(which,i){
+  const cfg=CFG[which];
+  const isLast=(i===cfg.counts.length-1);
+  return isLast
+    ? `${cfg.emoji} ${cfg.name}の枠が終了（本日完了）`
+    : `${cfg.emoji} ${cfg.name}解除！${i+2}回目（${cfg.counts[i+1]}）開始OK`;
+}
+function registerStageAlarm(which,i){
+  if(!calEnabled) return;
+  const s=state[which].stages[i];
+  downloadICS(alarmTitleFor(which,i), s.releaseTs, "楽天ROOM 活動カウンター", "解除アラーム");
+  toast("📅 解除アラームをカレンダーに登録");
+}
+function reRegisterStage(which,i){ registerStageAlarm(which,i); }
+function registerReset(which){
+  const st=state[which];
+  if(!st.firstTs) return;
+  downloadICS(`${CFG[which].emoji} ${CFG[which].name}リセット完了！また活動できます`, st.firstTs+DAY, "楽天ROOM 活動カウンター", "リセットアラーム");
+  toast("📅 リセット時刻をカレンダーに登録");
+}
+function toggleCal(el){
+  calEnabled=el.checked;
+  localStorage.setItem("rrc_cal", calEnabled?"on":"off");
+  toast(calEnabled?"カレンダー登録：ON":"カレンダー登録：OFF");
+}
+
+/* ---------- 通知 ---------- */
+let audioCtx=null;
+function beep(){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    [0,.18,.36].forEach(t=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.frequency.value=880;o.type="sine";o.connect(g);g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(.001,audioCtx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(.4,audioCtx.currentTime+t+.02);
+      g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+t+.15);
+      o.start(audioCtx.currentTime+t);o.stop(audioCtx.currentTime+t+.16);
+    });
+  }catch(e){}
+}
+function notify(title,body){
+  beep();
+  if("Notification" in window && Notification.permission==="granted"){ try{ new Notification(title,{body,tag:title}); }catch(e){} }
+  toast(title+" "+body);
+}
+function askNotify(silent){
+  if(!("Notification" in window)) return;
+  if(Notification.permission==="default"){ Notification.requestPermission().then(updateNotifBanner); }
+  if(!silent) updateNotifBanner();
+}
+function updateNotifBanner(){
+  document.getElementById("notifBanner").style.display =
+    ("Notification" in window && Notification.permission==="default")?"flex":"none";
+}
+
+/* ---------- 解除タイミングの監視 ---------- */
+function watch(){
+  ["like","follow"].forEach(w=>{
+    if(maybeReset(w)){
+      notify(CFG[w].emoji+" "+CFG[w].name, "リセットされました！また最初から活動できます🎉");
+      save(); return;
+    }
+    const cfg=CFG[w], st=state[w], now=Date.now();
+    st.stages.forEach((stg,i)=>{
+      if(!stg.notified && now>=stg.releaseTs){
+        stg.notified=true;
+        const last=(i===cfg.counts.length-1);
+        if(last) notify(cfg.emoji+" "+cfg.name, "本日の枠は完了です🎉 リセットは "+hm(st.firstTs+DAY)+" ごろ");
+        else     notify(cfg.emoji+" "+cfg.name, "解除されました！"+(i+2)+"回目（"+cfg.counts[i+1]+"）を開始できます");
+        save();
+      }
+    });
+  });
+}
+
+/* ---------- 描画 ---------- */
+function render(){
+  const now=new Date();
+  const wd=["日","月","火","水","木","金","土"][now.getDay()];
+  document.getElementById("date").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日(${wd})`;
+  document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
+  renderLimiter("like"); renderLimiter("follow");
+  renderPosting(); renderToday(); renderChart(); renderCumulative(); updateNotifBanner();
+}
+
+function renderLimiter(which){
+  maybeReset(which);
+  const cfg=CFG[which], st=state[which], now=Date.now();
+  const total=cfg.counts.length, done=st.stages.length;
+  const startedCap=st.stages.reduce((a,s)=>a+s.cap,0);
+  document.getElementById(which+"Done").textContent=done;
+  document.getElementById(which+"Meter").style.width=Math.min(100,startedCap/800*100)+"%";
+
+  // ステージ一覧
+  const list=document.getElementById(which+"Stages"); list.innerHTML="";
+  for(let i=0;i<total;i++){
+    const li=document.createElement("li"); li.className="stage-item";
+    if(i<done){
+      const s=st.stages[i];
+      const released=now>=s.releaseTs;
+      const tail = released
+        ? `<span class="tail done">✅ 解除済み</span>`
+        : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
+          `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
+      if(!released) li.className+=" active";
+      li.innerHTML=`<span class="no">${i+1}回目</span>`+
+        `<span class="time">開始 ${hm(s.startTs)} → 解除 ${hm(s.releaseTs)}</span>`+tail;
+    }else{
+      li.className+=" pending";
+      li.innerHTML=`<span class="no">${i+1}回目</span><span class="time">未開始</span>`+
+        `<span class="tail">（${cfg.counts[i]}）</span>`;
+    }
+    list.appendChild(li);
+  }
+
+  // ボタン＆ステータス
+  const btn=document.getElementById(which+"Btn");
+  const statusEl=document.getElementById(which+"Status");
+  const badge=document.getElementById(which+"Badge");
+
+  if(done>=total){
+    btn.disabled=true; btn.textContent="本日終了";
+    badge.className="badge bad"; badge.textContent="本日終了";
+    statusEl.className="status-line done";
+    statusEl.innerHTML=`🔁 リセット ${hm(st.firstTs+DAY)} ごろ（あと${countdown(st.firstTs+DAY-now)}）`+
+      ` <button class="mini-cal" onclick="registerReset('${which}')">📅 登録</button>`;
+    return;
+  }
+  if(done===0){
+    btn.disabled=false; btn.textContent=`${cfg.emoji} 1回目を開始（${cfg.counts[0]}）`;
+    badge.className="badge ok"; badge.textContent="準備OK";
+    statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
+    return;
+  }
+  const last=st.stages[done-1];
+  if(now<last.releaseTs){
+    btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(last.releaseTs-now)}`;
+    badge.className="badge warn"; badge.textContent="実施中";
+    statusEl.className="status-line wait";
+    statusEl.textContent=`${done}回目を実施中 ／ ${hm(last.releaseTs)} に解除`;
+  }else{
+    btn.disabled=false; btn.textContent=`${cfg.emoji} ${done+1}回目を開始（${cfg.counts[done]}）`;
+    badge.className="badge ok"; badge.textContent="解除済み";
+    statusEl.className="status-line ok";
+    statusEl.textContent=`解除済み！${done+1}回目を開始できます`;
+  }
+}
+
+function renderPosting(){
+  const p=state.posting;
+  document.getElementById("postIdle").style.display=p.active?"none":"flex";
+  document.getElementById("postActive").style.display=p.active?"block":"none";
+  const badge=document.getElementById("postBadge");
+  if(p.active){
+    document.getElementById("postStartT").textContent=hm(p.startTs);
+    document.getElementById("postElapsed").textContent=dur(Date.now()-p.startTs);
+    document.getElementById("postNum").textContent=p.count;
+    badge.className="badge warn"; badge.textContent="投稿中";
+  }else{ badge.className="badge ok"; badge.textContent="待機中"; }
+}
+
+function renderToday(){
+  const k=todayKey();
+  const today=state.rounds.filter(r=>r.dateKey===k);
+  const list=document.getElementById("roundsList"); list.innerHTML="";
+  if(today.length===0){
+    list.innerHTML='<li style="color:var(--muted);background:none;justify-content:center">まだラウンドがありません</li>';
+  }else today.forEach((r,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="rtag">R${i+1}</span>📝${r.count}　${hm(r.startTs)}–${hm(r.endTs)}　<span style="color:var(--muted)">(${dur(r.endTs-r.startTs)})</span>`;
+    list.appendChild(li);
+  });
+  const d=state.daily[k]||{likes:0,follows:0,posts:0};
+  document.getElementById("todayLike").textContent=d.likes;
+  document.getElementById("todayFollow").textContent=d.follows;
+  document.getElementById("todayPost").textContent=d.posts;
+  document.getElementById("todayRounds").textContent=today.length;
+}
+
+function streak(){
+  let n=0,d=new Date();
+  for(;;){
+    const k=dateKey(d.getTime()),e=state.daily[k];
+    const has=e&&(e.likes>0||e.follows>0||e.posts>0);
+    if(has){ n++; d.setDate(d.getDate()-1); }
+    else{ if(k===todayKey()){ d.setDate(d.getDate()-1); continue; } break; }
+  }
+  return n;
+}
+
+function setRange(n){
+  chartRange=n;
+  document.getElementById("wk7").className=n===7?"on":"";
+  document.getElementById("wk30").className=n===30?"on":"";
+  renderChart();
+}
+function renderChart(){
+  const cv=document.getElementById("chart");
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=170;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const days=[]; const base=new Date();
+  for(let i=chartRange-1;i>=0;i--){
+    const d=new Date(base); d.setDate(d.getDate()-i);
+    const e=state.daily[dateKey(d.getTime())]||{likes:0,follows:0,posts:0};
+    days.push({d,e});
+  }
+  let max=10; days.forEach(x=>max=Math.max(max,x.e.likes,x.e.follows,x.e.posts));
+  const padB=22,padT=8,padL=4,padR=4,chartH=H-padB-padT;
+  const slot=(W-padL-padR)/days.length;
+  const colors={likes:"#ff5b8a",follows:"#4a9be8",posts:"#27ae60"};
+  const keys=chartRange===7?["likes","follows","posts"]:["likes","follows"];
+  const bw=Math.max(2,Math.min(10,slot/(keys.length+1)));
+  ctx.strokeStyle="#eee"; ctx.beginPath(); ctx.moveTo(padL,H-padB); ctx.lineTo(W-padR,H-padB); ctx.stroke();
+  days.forEach((x,i)=>{
+    const x0=padL+slot*i+(slot-bw*keys.length)/2;
+    keys.forEach((kk,j)=>{
+      const h=x.e[kk]/max*chartH; ctx.fillStyle=colors[kk];
+      ctx.beginPath(); roundRect(ctx,x0+j*bw,H-padB-h,bw-1,h,Math.min(2,bw/2)); ctx.fill();
+    });
+    const show=chartRange===7?true:(i%5===0||i===days.length-1);
+    if(show){ ctx.fillStyle="#bbb"; ctx.font="9px sans-serif"; ctx.textAlign="center";
+      ctx.fillText((x.d.getMonth()+1)+"/"+x.d.getDate(),padL+slot*i+slot/2,H-7); }
+  });
+  ctx.fillStyle="#ccc"; ctx.font="9px sans-serif"; ctx.textAlign="left"; ctx.fillText("max "+max,padL+2,padT+8);
+}
+function roundRect(ctx,x,y,w,h,r){ if(h<=0)return;
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,0);ctx.arcTo(x,y+h,x,y,0);ctx.arcTo(x,y,x+w,y,r);ctx.closePath(); }
+function renderCumulative(){
+  let l=0,f=0,p=0; Object.values(state.daily).forEach(e=>{l+=e.likes;f+=e.follows;p+=e.posts;});
+  document.getElementById("cumLike").textContent=l;
+  document.getElementById("cumFollow").textContent=f;
+  document.getElementById("cumPost").textContent=p;
+}
+
+/* ---------- データ ---------- */
+function exportData(){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(state)],{type:"application/json"}));
+  a.download="rakuten_room_"+todayKey()+".json"; a.click(); toast("エクスポートしました");
+}
+function importData(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ const s=JSON.parse(rd.result); if(!s.like||!s.daily) throw 0;
+    state=s; save(); render(); toast("インポートしました ✅"); }catch(e){ toast("⚠️ 読み込めませんでした"); } };
+  rd.readAsText(f); ev.target.value="";
+}
+function resetAll(){
+  if(confirm("すべての記録を消去します。よろしいですか？")){ state=blankState(); save(); render(); toast("消去しました"); }
+}
+
+/* ---------- トースト ---------- */
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2600);
+}
+
+/* ---------- 起動 ---------- */
+window.addEventListener("resize", renderChart);
+document.getElementById("calToggle").checked = calEnabled;
+render();
+setInterval(()=>{ watch(); render(); }, 1000);
+</script>
+</body>
+</html>
