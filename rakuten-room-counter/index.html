@@ -216,10 +216,9 @@
   <div class="card">
     <div class="card-head"><span class="emoji">📅</span><span class="title">カレンダー通知</span></div>
     <div class="notice">
-      開始すると、各カードに <b>「📅 Googleで追加」</b> と <b>「📅 .icsで追加」</b> のボタンが出ます。タップして解除時刻のアラームをカレンダーに入れておくと、<b style="color:var(--rakuten)">アプリを閉じていても解除時刻に通知</b>が鳴ります。<br><br>
-      ・<b>📅 Googleで追加</b>（おすすめ）… タップでGoogleカレンダーが開く→「保存」を押すだけ。<br>
-      ・<b>📅 .icsで追加</b> … iPhone標準カレンダー派の方向け（.icsを開いて追加）。<br>
-      ※Googleは通知が「○分前」設定に従います。解除ぴったりに鳴らすには、Googleカレンダーの予定の通知を「0分前」にしてください。
+      開始すると、各カードに <b>「📅 iPhoneカレンダーに追加」</b> と <b>「Google」</b> のボタンが出ます。タップして解除時刻のアラームをカレンダーに入れておくと、<b style="color:var(--rakuten)">アプリを閉じていても解除時刻に通知</b>が鳴ります。<br><br>
+      ・<b>📅 iPhoneカレンダーに追加</b>（おすすめ）… タップ→「すべてのカレンダーに追加（追加）」を押すだけ。<b>解除時刻ぴったりに鳴る通知が最初から入っています</b>（設定変更ふよう）。<br>
+      ・<b>Google</b> … Googleカレンダー派の方向け。通知は予定の「○分前」設定に従うので、ぴったり鳴らすには「0分前」にしてください。
     </div>
     <label class="cal-toggle">
       <input type="checkbox" id="calToggle" onchange="toggleCal(this)">
@@ -531,8 +530,8 @@ function renderLimiter(which){
     const tail = released
       ? `<span class="tail done">✅ 解除済み</span>`
       : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
-        `<button class="mini-cal gcal" onclick="openGCalStage('${which}',${i})">Google</button>`+
-        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">.ics</button>`;
+        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">iPhone</button>`+
+        `<button class="mini-cal gcal" onclick="openGCalStage('${which}',${i})">Google</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
@@ -572,15 +571,15 @@ function renderLimiter(which){
     badge.className="badge bad"; badge.textContent="本日終了";
     statusEl.className="status-line done";
     statusEl.innerHTML=`🔁 リセット ${hm(st.firstTs+DAY)} ごろ（あと${countdown(st.firstTs+DAY-now)}）<br>`+
-      `<button class="mini-cal gcal" onclick="openGCalReset('${which}')">📅 Googleで追加</button>`+
-      `<button class="mini-cal" onclick="registerReset('${which}')">📅 .icsで追加</button>`;
+      `<button class="mini-cal" onclick="registerReset('${which}')">📅 iPhoneカレンダーに追加</button>`+
+      `<button class="mini-cal gcal" onclick="openGCalReset('${which}')">Google</button>`;
   }else if(waiting){
     const last=st.stages[st.stages.length-1];
     badge.className="badge warn"; badge.textContent="実施中";
     statusEl.className="status-line wait";
     statusEl.innerHTML=`実施中 ／ ${hm(last.releaseTs)} に解除<br>`+
-      `<button class="mini-cal gcal" onclick="openGCalStage('${which}',${st.stages.length-1})">📅 Googleで追加</button>`+
-      `<button class="mini-cal" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 .icsで追加</button>`;
+      `<button class="mini-cal" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 iPhoneカレンダーに追加</button>`+
+      `<button class="mini-cal gcal" onclick="openGCalStage('${which}',${st.stages.length-1})">Google</button>`;
   }else if(st.stages.length===0){
     badge.className="badge ok"; badge.textContent="準備OK";
     statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
