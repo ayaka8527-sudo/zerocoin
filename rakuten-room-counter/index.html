@@ -49,6 +49,7 @@
   .sub-btn:disabled{opacity:.4;cursor:not-allowed}
   .sub-btn.spare{border-color:#ffcf5c;color:#c47f00;background:#fff9ec}
   .sub-btn.cancel{border-color:#e0b3bd;color:var(--bad)}
+  .sub-btn.cancel.armed{background:var(--bad);color:#fff;border-color:var(--bad)}
   .stage-item.spare{background:#fff9ec}
   .stage-item.spare .no{color:#c47f00}
   .stage-list{list-style:none;margin:12px 0 0;padding:0}
@@ -326,14 +327,25 @@ function pressSpare(which){
   registerStageAlarm(which, st.stages.length-1);
   toast(cfg.emoji+" 予備をスタート！解除は "+hm(now+HOUR));
 }
+let cancelArm={like:0,follow:0};
+const CANCEL_WINDOW=2500;
 function cancelLast(which){
   const st=state[which];
   if(st.stages.length===0){ toast("取り消す開始がありません"); return; }
-  const s=st.stages.pop();
-  bumpDaily(which==="like"?"likes":"follows", s.startTs, -s.cap);
-  if(st.stages.length===0) st.firstTs=null;
-  save(); render();
-  toast("直前の開始を取り消しました");
+  const now=Date.now();
+  if(now-cancelArm[which] < CANCEL_WINDOW){
+    cancelArm[which]=0;
+    const s=st.stages.pop();
+    bumpDaily(which==="like"?"likes":"follows", s.startTs, -s.cap);
+    if(st.stages.length===0) st.firstTs=null;
+    save(); render();
+    toast("直前の開始を取り消しました");
+  }else{
+    cancelArm[which]=now;
+    toast("もう一度タップで取り消します");
+    render();
+    setTimeout(()=>{ if(Date.now()-cancelArm[which]>=CANCEL_WINDOW){ cancelArm[which]=0; render(); } }, CANCEL_WINDOW+100);
+  }
 }
 function bumpDaily(field,ts,d){
   const k=dateKey(ts);
@@ -547,6 +559,11 @@ function renderLimiter(which){
   else{ sp.disabled=false; sp.textContent=`＋予備で開始（${cfg.spareCap}）`; }
   const cb=document.getElementById(which+"CancelBtn");
   cb.disabled = st.stages.length===0;
+  if(st.stages.length>0 && Date.now()-cancelArm[which] < CANCEL_WINDOW){
+    cb.textContent="もう一度で取消"; cb.classList.add("armed");
+  }else{
+    cb.textContent="↩︎ 直前を取消"; cb.classList.remove("armed");
+  }
 
   // ステータス＆バッジ
   const statusEl=document.getElementById(which+"Status");
