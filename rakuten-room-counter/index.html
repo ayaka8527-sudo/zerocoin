@@ -42,6 +42,15 @@
   .like .start-btn{background:var(--like)}
   .follow .start-btn{background:var(--follow)}
   .post .start-btn,.pbtn.start{background:var(--post)}
+  .sub-btns{display:flex;gap:8px;margin-top:8px}
+  .sub-btn{flex:1;border:1.5px solid #e0d3d8;background:#fff;border-radius:11px;padding:11px;
+    font-size:13px;font-weight:800;cursor:pointer;transition:transform .08s,opacity .2s}
+  .sub-btn:active{transform:scale(.96)}
+  .sub-btn:disabled{opacity:.4;cursor:not-allowed}
+  .sub-btn.spare{border-color:#ffcf5c;color:#c47f00;background:#fff9ec}
+  .sub-btn.cancel{border-color:#e0b3bd;color:var(--bad)}
+  .stage-item.spare{background:#fff9ec}
+  .stage-item.spare .no{color:#c47f00}
   .stage-list{list-style:none;margin:12px 0 0;padding:0}
   .stage-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:9px 11px;border-radius:10px;
     background:#faf3f5;margin-bottom:6px}
@@ -68,6 +77,11 @@
   .post .btn-circle.plus{background:var(--post)} .post .btn-circle.minus{background:#9bd6b3}
   .counter{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
   .count-num{font-size:48px;font-weight:900;min-width:110px;text-align:center}
+  .post-input-row{display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 2px}
+  .post-input{width:130px;height:64px;font-size:40px;font-weight:900;text-align:center;border:2px solid var(--post);
+    border-radius:14px;color:var(--txt);background:#fff;-moz-appearance:textfield}
+  .post-input::-webkit-outer-spin-button,.post-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .post-input-label{text-align:center;font-size:11.5px;color:var(--muted);margin-bottom:10px}
   .post-actions{display:flex;gap:10px}
   .pbtn{flex:1;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer}
   .pbtn:active{transform:scale(.97)} .pbtn.stop{background:var(--rakuten)}
@@ -123,6 +137,10 @@
     <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
+    <div class="sub-btns">
+      <button class="sub-btn spare" id="likeSpareBtn" onclick="pressSpare('like')">＋予備で開始（200）</button>
+      <button class="sub-btn cancel" id="likeCancelBtn" onclick="cancelLast('like')">↩︎ 直前を取消</button>
+    </div>
     <ul class="stage-list" id="likeStages"></ul>
     <div class="status-line ok" id="likeStatus">開始ボタンを押すと記録スタート</div>
   </div>
@@ -133,6 +151,10 @@
     <div class="progress-num"><b id="followDone">0</b> / 8 回　（100×8＝800）</div>
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
+    <div class="sub-btns">
+      <button class="sub-btn spare" id="followSpareBtn" onclick="pressSpare('follow')">＋予備で開始（100）</button>
+      <button class="sub-btn cancel" id="followCancelBtn" onclick="cancelLast('follow')">↩︎ 直前を取消</button>
+    </div>
     <ul class="stage-list" id="followStages"></ul>
     <div class="status-line ok" id="followStatus">開始ボタンを押すと記録スタート</div>
   </div>
@@ -145,11 +167,12 @@
     </div>
     <div id="postActive" style="display:none">
       <div class="round-now">⏱ 開始 <b id="postStartT">--:--</b> ／ 経過 <b id="postElapsed">0分</b></div>
-      <div class="counter">
+      <div class="post-input-row">
         <button class="btn-circle minus" onclick="decPost()">−</button>
-        <span class="count-num" id="postNum">0</span>
+        <input type="number" id="postInput" class="post-input" min="0" inputmode="numeric" value="0" oninput="setPostCount(this.value)">
         <button class="btn-circle plus" onclick="incPost()">＋</button>
       </div>
+      <div class="post-input-label">投稿数を直接入力（＋−でも調整できます）</div>
       <div class="post-actions"><button class="pbtn stop" onclick="endPosting()">✅ 投稿おわり（記録）</button></div>
     </div>
   </div>
@@ -225,8 +248,8 @@
 "use strict";
 const HOUR=3600000, DAY=86400000;
 const CFG = {
-  like:   { counts:[300,300,200],                    emoji:"❤️", name:"いいね", color:"--like" },
-  follow: { counts:[100,100,100,100,100,100,100,100], emoji:"👥", name:"フォロー", color:"--follow" }
+  like:   { counts:[300,300,200],                     spareCap:200, emoji:"❤️", name:"いいね", color:"--like" },
+  follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
 
@@ -265,23 +288,50 @@ function maybeReset(which){
   if(st.firstTs && Date.now()>=st.firstTs+DAY){ st.firstTs=null; st.stages=[]; return true; }
   return false;
 }
+function inWait(which){
+  const st=state[which];
+  if(st.stages.length===0) return false;
+  return Date.now() < st.stages[st.stages.length-1].releaseTs;
+}
+function standardDone(which){ return state[which].stages.filter(s=>!s.spare).length; }
+function spareUsed(which){ return state[which].stages.some(s=>s.spare); }
+
 function press(which){
   maybeReset(which);
   const cfg=CFG[which], st=state[which], now=Date.now();
-  const total=cfg.counts.length;
-  if(st.stages.length>=total){ toast("本日は完了です。リセットをお待ちください"); return; }
-  if(st.stages.length>0){
-    const last=st.stages[st.stages.length-1];
-    if(now<last.releaseTs){ toast("まだ解除前です（あと"+countdown(last.releaseTs-now)+"）"); return; }
-  }
+  if(standardDone(which)>=cfg.counts.length){ toast("規定回数は完了です（予備または取消をどうぞ）"); return; }
+  if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
   if(!st.firstTs) st.firstTs=now;
-  const cap=cfg.counts[st.stages.length];
-  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, notified:false });
+  const cap=cfg.counts[standardDone(which)];
+  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, spare:false, notified:false });
   bumpDaily(which==="like"?"likes":"follows", now, +cap);
   askNotify(true);
   save(); render();
   registerStageAlarm(which, st.stages.length-1);
-  toast(cfg.emoji+" "+st.stages.length+"回目スタート！解除は "+hm(now+HOUR));
+  toast(cfg.emoji+" "+standardDone(which)+"回目スタート！解除は "+hm(now+HOUR));
+}
+function pressSpare(which){
+  maybeReset(which);
+  const cfg=CFG[which], st=state[which], now=Date.now();
+  if(spareUsed(which)){ toast("予備はすでに使用済みです"); return; }
+  if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
+  if(!st.firstTs) st.firstTs=now;
+  const cap=cfg.spareCap;
+  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, spare:true, notified:false });
+  bumpDaily(which==="like"?"likes":"follows", now, +cap);
+  askNotify(true);
+  save(); render();
+  registerStageAlarm(which, st.stages.length-1);
+  toast(cfg.emoji+" 予備をスタート！解除は "+hm(now+HOUR));
+}
+function cancelLast(which){
+  const st=state[which];
+  if(st.stages.length===0){ toast("取り消す開始がありません"); return; }
+  const s=st.stages.pop();
+  bumpDaily(which==="like"?"likes":"follows", s.startTs, -s.cap);
+  if(st.stages.length===0) st.firstTs=null;
+  save(); render();
+  toast("直前の開始を取り消しました");
 }
 function bumpDaily(field,ts,d){
   const k=dateKey(ts);
@@ -291,8 +341,16 @@ function bumpDaily(field,ts,d){
 
 /* ---------- 投稿 ---------- */
 function startPosting(){ state.posting={active:true,startTs:Date.now(),count:0}; save(); render(); }
-function incPost(){ if(state.posting.active){state.posting.count++;bumpDaily("posts",Date.now(),+1);save();render();} }
-function decPost(){ if(state.posting.active&&state.posting.count>0){state.posting.count--;bumpDaily("posts",Date.now(),-1);save();render();} }
+function setPostCount(v){
+  if(!state.posting.active) return;
+  const n=Math.max(0,parseInt(v,10)||0);
+  const d=n-state.posting.count;
+  state.posting.count=n;
+  bumpDaily("posts", state.posting.startTs, d);
+  save(); render();
+}
+function incPost(){ if(state.posting.active) setPostCount(state.posting.count+1); }
+function decPost(){ if(state.posting.active) setPostCount(state.posting.count-1); }
 function endPosting(){
   const p=state.posting; if(!p.active) return;
   state.rounds.push({dateKey:dateKey(p.startTs),startTs:p.startTs,endTs:Date.now(),count:p.count});
@@ -325,12 +383,20 @@ function downloadICS(title,whenMs,desc,fname){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
+function stdPosOf(which,i){
+  if(state[which].stages[i].spare) return 0;
+  let p=0; for(let k=0;k<=i;k++) if(!state[which].stages[k].spare) p++;
+  return p;
+}
+function releaseMsg(which,i){
+  const cfg=CFG[which], st=state[which], s=st.stages[i];
+  if(s.spare) return "予備の枠が終了しました🎉";
+  const pos=stdPosOf(which,i);
+  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 リセットは "+(st.firstTs?hm(st.firstTs+DAY):"-")+" ごろ";
+  return "解除！"+(pos+1)+"回目（"+cfg.counts[pos]+"）を開始OK";
+}
 function alarmTitleFor(which,i){
-  const cfg=CFG[which];
-  const isLast=(i===cfg.counts.length-1);
-  return isLast
-    ? `${cfg.emoji} ${cfg.name}の枠が終了（本日完了）`
-    : `${cfg.emoji} ${cfg.name}解除！${i+2}回目（${cfg.counts[i+1]}）開始OK`;
+  return `${CFG[which].emoji} ${CFG[which].name} `+releaseMsg(which,i);
 }
 function registerStageAlarm(which,i){
   if(!calEnabled) return;
@@ -392,9 +458,7 @@ function watch(){
     st.stages.forEach((stg,i)=>{
       if(!stg.notified && now>=stg.releaseTs){
         stg.notified=true;
-        const last=(i===cfg.counts.length-1);
-        if(last) notify(cfg.emoji+" "+cfg.name, "本日の枠は完了です🎉 リセットは "+hm(st.firstTs+DAY)+" ごろ");
-        else     notify(cfg.emoji+" "+cfg.name, "解除されました！"+(i+2)+"回目（"+cfg.counts[i+1]+"）を開始できます");
+        notify(cfg.emoji+" "+cfg.name, releaseMsg(w,i));
         save();
       }
     });
@@ -414,63 +478,72 @@ function render(){
 function renderLimiter(which){
   maybeReset(which);
   const cfg=CFG[which], st=state[which], now=Date.now();
-  const total=cfg.counts.length, done=st.stages.length;
+  const total=cfg.counts.length;
+  const stdDone=standardDone(which), spUsed=spareUsed(which), waiting=inWait(which);
   const startedCap=st.stages.reduce((a,s)=>a+s.cap,0);
-  document.getElementById(which+"Done").textContent=done;
+  document.getElementById(which+"Done").textContent=stdDone+(spUsed?"+予備":"");
   document.getElementById(which+"Meter").style.width=Math.min(100,startedCap/800*100)+"%";
 
-  // ステージ一覧
+  // ステージ一覧（開始した順＋未開始の規定枠）
   const list=document.getElementById(which+"Stages"); list.innerHTML="";
-  for(let i=0;i<total;i++){
+  let stdSeen=0;
+  st.stages.forEach((s,i)=>{
     const li=document.createElement("li"); li.className="stage-item";
-    if(i<done){
-      const s=st.stages[i];
-      const released=now>=s.releaseTs;
-      const tail = released
-        ? `<span class="tail done">✅ 解除済み</span>`
-        : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
-          `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
-      if(!released) li.className+=" active";
-      li.innerHTML=`<span class="no">${i+1}回目</span>`+
-        `<span class="time">開始 ${hm(s.startTs)} → 解除 ${hm(s.releaseTs)}</span>`+tail;
-    }else{
-      li.className+=" pending";
-      li.innerHTML=`<span class="no">${i+1}回目</span><span class="time">未開始</span>`+
-        `<span class="tail">（${cfg.counts[i]}）</span>`;
-    }
+    const released=now>=s.releaseTs;
+    const label = s.spare ? "予備" : (++stdSeen)+"回目";
+    const tail = released
+      ? `<span class="tail done">✅ 解除済み</span>`
+      : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
+        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
+    if(!released) li.className+=" active";
+    if(s.spare) li.className+=" spare";
+    li.innerHTML=`<span class="no">${label}</span>`+
+      `<span class="time">開始 ${hm(s.startTs)} → 解除 ${hm(s.releaseTs)}</span>`+tail;
+    list.appendChild(li);
+  });
+  for(let k=stdSeen;k<total;k++){
+    const li=document.createElement("li"); li.className="stage-item pending";
+    li.innerHTML=`<span class="no">${k+1}回目</span><span class="time">未開始</span>`+
+      `<span class="tail">（${cfg.counts[k]}）</span>`;
     list.appendChild(li);
   }
 
-  // ボタン＆ステータス
+  // メインの開始ボタン
   const btn=document.getElementById(which+"Btn");
+  if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
+  else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
+  else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
+
+  // 予備ボタン・取消ボタン
+  const sp=document.getElementById(which+"SpareBtn");
+  if(spUsed){ sp.disabled=true; sp.textContent="予備：使用済み"; }
+  else if(waiting){ sp.disabled=true; sp.textContent="＋予備（待機中）"; }
+  else{ sp.disabled=false; sp.textContent=`＋予備で開始（${cfg.spareCap}）`; }
+  const cb=document.getElementById(which+"CancelBtn");
+  cb.disabled = st.stages.length===0;
+
+  // ステータス＆バッジ
   const statusEl=document.getElementById(which+"Status");
   const badge=document.getElementById(which+"Badge");
-
-  if(done>=total){
-    btn.disabled=true; btn.textContent="本日終了";
+  if(stdDone>=total && spUsed){
     badge.className="badge bad"; badge.textContent="本日終了";
     statusEl.className="status-line done";
     statusEl.innerHTML=`🔁 リセット ${hm(st.firstTs+DAY)} ごろ（あと${countdown(st.firstTs+DAY-now)}）`+
       ` <button class="mini-cal" onclick="registerReset('${which}')">📅 登録</button>`;
-    return;
-  }
-  if(done===0){
-    btn.disabled=false; btn.textContent=`${cfg.emoji} 1回目を開始（${cfg.counts[0]}）`;
-    badge.className="badge ok"; badge.textContent="準備OK";
-    statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
-    return;
-  }
-  const last=st.stages[done-1];
-  if(now<last.releaseTs){
-    btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(last.releaseTs-now)}`;
+  }else if(waiting){
+    const last=st.stages[st.stages.length-1];
     badge.className="badge warn"; badge.textContent="実施中";
     statusEl.className="status-line wait";
-    statusEl.textContent=`${done}回目を実施中 ／ ${hm(last.releaseTs)} に解除`;
+    statusEl.textContent=`実施中 ／ ${hm(last.releaseTs)} に解除`;
+  }else if(st.stages.length===0){
+    badge.className="badge ok"; badge.textContent="準備OK";
+    statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
+  }else if(stdDone>=total){
+    badge.className="badge ok"; badge.textContent="予備OK";
+    statusEl.className="status-line ok"; statusEl.textContent="規定完了！必要なら「予備」を開始できます";
   }else{
-    btn.disabled=false; btn.textContent=`${cfg.emoji} ${done+1}回目を開始（${cfg.counts[done]}）`;
     badge.className="badge ok"; badge.textContent="解除済み";
-    statusEl.className="status-line ok";
-    statusEl.textContent=`解除済み！${done+1}回目を開始できます`;
+    statusEl.className="status-line ok"; statusEl.textContent=`解除済み！${stdDone+1}回目を開始できます`;
   }
 }
 
@@ -482,7 +555,8 @@ function renderPosting(){
   if(p.active){
     document.getElementById("postStartT").textContent=hm(p.startTs);
     document.getElementById("postElapsed").textContent=dur(Date.now()-p.startTs);
-    document.getElementById("postNum").textContent=p.count;
+    const inp=document.getElementById("postInput");
+    if(document.activeElement!==inp) inp.value=p.count;
     badge.className="badge warn"; badge.textContent="投稿中";
   }else{ badge.className="badge ok"; badge.textContent="待機中"; }
 }
@@ -587,7 +661,10 @@ function toast(msg){
 
 /* ---------- 起動 ---------- */
 window.addEventListener("resize", renderChart);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ watch(); render(); } });
+window.addEventListener("focus", ()=>{ watch(); render(); });
 document.getElementById("calToggle").checked = calEnabled;
+watch();
 render();
 setInterval(()=>{ watch(); render(); }, 1000);
 </script>
