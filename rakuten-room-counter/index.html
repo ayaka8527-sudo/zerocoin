@@ -61,8 +61,9 @@
   .stage-item.pending{opacity:.45}
   .stage-item.active{background:#fff3e6}
   .stage-item .tail.done{color:var(--ok)} .stage-item .tail.wait{color:var(--warn)}
-  .mini-cal{margin-left:6px;border:none;background:#ffe3ec;color:var(--rakuten);border-radius:7px;
-    padding:3px 7px;font-size:12px;font-weight:700;cursor:pointer}
+  .mini-cal{margin-left:6px;border:none;background:#ffe3ec;color:var(--rakuten);border-radius:8px;
+    padding:6px 11px;font-size:12.5px;font-weight:800;cursor:pointer}
+  .mini-cal:active{transform:scale(.95)}
   .cal-toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;
     background:#fff7fa;border:1.5px solid #ffd6e2;border-radius:10px;padding:9px 11px}
   .cal-toggle input{width:18px;height:18px;accent-color:var(--rakuten)}
@@ -218,9 +219,9 @@
       <b style="color:var(--rakuten)">→ アプリを閉じていても解除時刻に通知が鳴ります</b></span>
     </label>
     <div class="notice">
-      ・押すたびに「○○:○○ 解除」の予定（アラーム付き）が作られます。<br>
-      ・iPhoneは追加時に「カレンダーに追加」を選択／Androidはカレンダーアプリで開いて保存。<br>
-      ・各回の「📅」ボタンで登録し直し、本日終了後は「📅 登録」でリセット時刻も登録できます。
+      ・「開始」を押すと <b>iPhoneは「カレンダーに追加」画面が直接ひらきます</b>（「追加」を押すだけ）。<br>
+      ・うまく出ない時は、ステータスや各回の <b>「📅 追加」ボタン</b>をタップでもOK。<br>
+      ・本日終了後は「📅 登録」でリセット時刻も登録できます。
     </div>
   </div>
 
@@ -375,13 +376,26 @@ function makeICS(title,whenMs,desc){
     "END:VEVENT","END:VCALENDAR"
   ].join("\r\n");
 }
+function isIOS(){
+  return /iP(hone|ad|od)/.test(navigator.userAgent) ||
+         (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+}
 function downloadICS(title,whenMs,desc,fname){
-  const blob=new Blob([makeICS(title,whenMs,desc)],{type:"text/calendar;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download=(fname||"解除アラーム")+".ics";
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  const ics=makeICS(title,whenMs,desc);
+  if(isIOS()){
+    // iPhone/iPad：データURLで「カレンダーに追加」シートを直接開く（ワンタップ）
+    const a=document.createElement("a");
+    a.href="data:text/calendar;charset=utf-8,"+encodeURIComponent(ics);
+    a.target="_blank"; a.rel="noopener";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }else{
+    // PC/Android：.icsをダウンロード（開くとカレンダーに追加）
+    const url=URL.createObjectURL(new Blob([ics],{type:"text/calendar;charset=utf-8"}));
+    const a=document.createElement("a");
+    a.href=url; a.download=(fname||"解除アラーム")+".ics";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
 }
 function stdPosOf(which,i){
   if(state[which].stages[i].spare) return 0;
@@ -494,7 +508,7 @@ function renderLimiter(which){
     const tail = released
       ? `<span class="tail done">✅ 解除済み</span>`
       : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
-        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
+        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅 追加</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
@@ -534,7 +548,8 @@ function renderLimiter(which){
     const last=st.stages[st.stages.length-1];
     badge.className="badge warn"; badge.textContent="実施中";
     statusEl.className="status-line wait";
-    statusEl.textContent=`実施中 ／ ${hm(last.releaseTs)} に解除`;
+    statusEl.innerHTML=`実施中 ／ ${hm(last.releaseTs)} に解除 `+
+      `<button class="mini-cal" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 カレンダーに追加</button>`;
   }else if(st.stages.length===0){
     badge.className="badge ok"; badge.textContent="準備OK";
     statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
