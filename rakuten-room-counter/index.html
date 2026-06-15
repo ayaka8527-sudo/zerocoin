@@ -64,6 +64,7 @@
   .mini-cal{margin-left:6px;border:none;background:#ffe3ec;color:var(--rakuten);border-radius:8px;
     padding:6px 11px;font-size:12.5px;font-weight:800;cursor:pointer}
   .mini-cal:active{transform:scale(.95)}
+  .mini-cal.gcal{background:#e7f1ff;color:#1a73e8}
   .cal-toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;
     background:#fff7fa;border:1.5px solid #ffd6e2;border-radius:10px;padding:9px 11px}
   .cal-toggle input{width:18px;height:18px;accent-color:var(--rakuten)}
@@ -213,16 +214,16 @@
   <!-- 設定（カレンダー） -->
   <div class="card">
     <div class="card-head"><span class="emoji">📅</span><span class="title">カレンダー通知</span></div>
+    <div class="notice">
+      開始すると、各カードに <b>「📅 Googleで追加」</b> と <b>「📅 .icsで追加」</b> のボタンが出ます。タップして解除時刻のアラームをカレンダーに入れておくと、<b style="color:var(--rakuten)">アプリを閉じていても解除時刻に通知</b>が鳴ります。<br><br>
+      ・<b>📅 Googleで追加</b>（おすすめ）… タップでGoogleカレンダーが開く→「保存」を押すだけ。<br>
+      ・<b>📅 .icsで追加</b> … iPhone標準カレンダー派の方向け（.icsを開いて追加）。<br>
+      ※Googleは通知が「○分前」設定に従います。解除ぴったりに鳴らすには、Googleカレンダーの予定の通知を「0分前」にしてください。
+    </div>
     <label class="cal-toggle">
       <input type="checkbox" id="calToggle" onchange="toggleCal(this)">
-      <span>「開始」を押したら解除時刻のアラームをカレンダーに自動登録する<br>
-      <b style="color:var(--rakuten)">→ アプリを閉じていても解除時刻に通知が鳴ります</b></span>
+      <span>「開始」を押した瞬間に自動で.icsを追加する（上級者向け／通常はボタン操作でOK）</span>
     </label>
-    <div class="notice">
-      ・「開始」を押すと <b>iPhoneは「カレンダーに追加」画面が直接ひらきます</b>（「追加」を押すだけ）。<br>
-      ・うまく出ない時は、ステータスや各回の <b>「📅 追加」ボタン</b>をタップでもOK。<br>
-      ・本日終了後は「📅 登録」でリセット時刻も登録できます。
-    </div>
   </div>
 
   <!-- データ -->
@@ -360,7 +361,7 @@ function endPosting(){
 }
 
 /* ---------- カレンダー連携（閉じてても通知） ---------- */
-let calEnabled = localStorage.getItem("rrc_cal")!=="off";
+let calEnabled = localStorage.getItem("rrc_cal")==="on";
 function icsTime(ms){
   const d=new Date(ms),p=n=>String(n).padStart(2,"0");
   return d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+"T"+p(d.getUTCHours())+p(d.getUTCMinutes())+p(d.getUTCSeconds())+"Z";
@@ -380,22 +381,32 @@ function isIOS(){
   return /iP(hone|ad|od)/.test(navigator.userAgent) ||
          (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
 }
+// .icsをダウンロード（PC/Android/iPhone共通・白画面にならない確実な方法）
 function downloadICS(title,whenMs,desc,fname){
   const ics=makeICS(title,whenMs,desc);
-  if(isIOS()){
-    // iPhone/iPad：データURLで「カレンダーに追加」シートを直接開く（ワンタップ）
-    const a=document.createElement("a");
-    a.href="data:text/calendar;charset=utf-8,"+encodeURIComponent(ics);
-    a.target="_blank"; a.rel="noopener";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }else{
-    // PC/Android：.icsをダウンロード（開くとカレンダーに追加）
-    const url=URL.createObjectURL(new Blob([ics],{type:"text/calendar;charset=utf-8"}));
-    const a=document.createElement("a");
-    a.href=url; a.download=(fname||"解除アラーム")+".ics";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url),2000);
-  }
+  const url=URL.createObjectURL(new Blob([ics],{type:"text/calendar;charset=utf-8"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=(fname||"解除アラーム")+".ics";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+// Googleカレンダーで追加（タップでGoogleカレンダーが開く→保存するだけ）
+function gcalURL(title,whenMs){
+  const s=icsTime(whenMs), e=icsTime(whenMs+5*60000);
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE"+
+    "&text="+encodeURIComponent(title)+
+    "&dates="+s+"/"+e+
+    "&details="+encodeURIComponent("楽天ROOM 活動カウンター（解除時刻のお知らせ）。通知は『○分前=0』に設定すると解除ぴったりに鳴ります。");
+}
+function openGCalStage(which,i){
+  const s=state[which].stages[i];
+  window.open(gcalURL(alarmTitleFor(which,i), s.releaseTs), "_blank");
+  toast("Googleカレンダーで「保存」を押してください");
+}
+function openGCalReset(which){
+  const st=state[which]; if(!st.firstTs) return;
+  window.open(gcalURL(`${CFG[which].emoji} ${CFG[which].name}リセット完了！また活動できます`, st.firstTs+DAY), "_blank");
+  toast("Googleカレンダーで「保存」を押してください");
 }
 function stdPosOf(which,i){
   if(state[which].stages[i].spare) return 0;
@@ -508,7 +519,8 @@ function renderLimiter(which){
     const tail = released
       ? `<span class="tail done">✅ 解除済み</span>`
       : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
-        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅 追加</button>`;
+        `<button class="mini-cal gcal" onclick="openGCalStage('${which}',${i})">Google</button>`+
+        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">.ics</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
@@ -542,14 +554,16 @@ function renderLimiter(which){
   if(stdDone>=total && spUsed){
     badge.className="badge bad"; badge.textContent="本日終了";
     statusEl.className="status-line done";
-    statusEl.innerHTML=`🔁 リセット ${hm(st.firstTs+DAY)} ごろ（あと${countdown(st.firstTs+DAY-now)}）`+
-      ` <button class="mini-cal" onclick="registerReset('${which}')">📅 登録</button>`;
+    statusEl.innerHTML=`🔁 リセット ${hm(st.firstTs+DAY)} ごろ（あと${countdown(st.firstTs+DAY-now)}）<br>`+
+      `<button class="mini-cal gcal" onclick="openGCalReset('${which}')">📅 Googleで追加</button>`+
+      `<button class="mini-cal" onclick="registerReset('${which}')">📅 .icsで追加</button>`;
   }else if(waiting){
     const last=st.stages[st.stages.length-1];
     badge.className="badge warn"; badge.textContent="実施中";
     statusEl.className="status-line wait";
-    statusEl.innerHTML=`実施中 ／ ${hm(last.releaseTs)} に解除 `+
-      `<button class="mini-cal" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 カレンダーに追加</button>`;
+    statusEl.innerHTML=`実施中 ／ ${hm(last.releaseTs)} に解除<br>`+
+      `<button class="mini-cal gcal" onclick="openGCalStage('${which}',${st.stages.length-1})">📅 Googleで追加</button>`+
+      `<button class="mini-cal" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 .icsで追加</button>`;
   }else if(st.stages.length===0){
     badge.className="badge ok"; badge.textContent="準備OK";
     statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
