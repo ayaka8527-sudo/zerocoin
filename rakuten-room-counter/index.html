@@ -307,7 +307,7 @@ function press(which){
   bumpDaily(which==="like"?"likes":"follows", now, +cap);
   askNotify(true);
   save(); render();
-  registerStageAlarm(which, st.stages.length-1);
+  if(calEnabled) registerStageAlarm(which, st.stages.length-1);
   toast(cfg.emoji+" "+standardDone(which)+"回目スタート！解除は "+hm(now+HOUR));
 }
 function pressSpare(which){
@@ -321,7 +321,7 @@ function pressSpare(which){
   bumpDaily(which==="like"?"likes":"follows", now, +cap);
   askNotify(true);
   save(); render();
-  registerStageAlarm(which, st.stages.length-1);
+  if(calEnabled) registerStageAlarm(which, st.stages.length-1);
   toast(cfg.emoji+" 予備をスタート！解除は "+hm(now+HOUR));
 }
 let cancelArm={like:0,follow:0};
@@ -415,7 +415,6 @@ function alarmTitleFor(which,i){
   return `${CFG[which].emoji} ${CFG[which].name} `+releaseMsg(which,i);
 }
 function registerStageAlarm(which,i){
-  if(!calEnabled) return;
   const s=state[which].stages[i];
   downloadICS(alarmTitleFor(which,i), s.releaseTs, "楽天ROOM 活動カウンター", "解除アラーム");
   toast("📅 解除アラームをカレンダーに登録");
