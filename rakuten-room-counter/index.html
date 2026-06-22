@@ -248,9 +248,10 @@
   <!-- 今日の投稿ネタ -->
   <div class="card">
     <div class="card-head"><span class="emoji">🧷</span><span class="title">今日の投稿ネタ（URL・投稿文）</span><span class="badge ok" id="draftRemain"></span></div>
-    <input type="url" id="draftUrl" class="draft-input" placeholder="商品URL（https://...）" inputmode="url">
-    <textarea id="draftText" class="draft-textarea" placeholder="投稿文（紹介文）をここに"></textarea>
+    <input type="text" id="draftUrl" class="draft-input" placeholder="商品URL（楽天の共有文をそのまま貼ってもOK）">
+    <textarea id="draftText" class="draft-textarea" placeholder="投稿文（紹介文）。空ならURL欄の文章から自動で入ります"></textarea>
     <button class="start-btn draft-add" onclick="addDraft()">＋ 保存する</button>
+    <div class="notice" style="margin-top:4px">楽天の「共有」で出る文章（タイトル＋URL）を上の欄に貼って保存すると、URLだけ自動で取り出します。</div>
     <ul class="draft-list" id="draftList"></ul>
   </div>
 
@@ -349,7 +350,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-06-22d（URL自動補正）";
+const APP_VERSION="2026-06-22e（共有文からURL自動抽出）";
 
 let state = load();
 if(!state.drafts) state.drafts=[];
@@ -844,8 +845,19 @@ function renderCalendar(){
 /* ---------- 今日の投稿ネタ（URL・投稿文） ---------- */
 function normUrl(u){ u=(u||"").trim(); if(u && !/^https?:\/\//i.test(u)) u="https://"+u.replace(/^\/+/,""); return u; }
 function addDraft(){
-  const u=normUrl(document.getElementById("draftUrl").value);
-  const t=document.getElementById("draftText").value.trim();
+  const urlRaw=document.getElementById("draftUrl").value;
+  const textRaw=document.getElementById("draftText").value;
+  // 楽天の共有文（タイトル＋#タグ＋URL）をどちらの欄に貼ってもOK：URLだけ自動抽出
+  const combined=urlRaw+"\n"+textRaw;
+  const m=combined.match(/https?:\/\/[^\s　]+/);
+  let u = m ? m[0] : normUrl(urlRaw);
+  let t = textRaw.trim();
+  if(!t){
+    // 投稿文欄が空なら、URL欄からURL・共有定型・空行を除いた残りを投稿文に
+    t = urlRaw.replace(/https?:\/\/[^\s　]+/g,"")
+              .replace(/\[楽天\]\s*#Rakutenichiba/gi,"")
+              .replace(/\s*\n\s*/g," ").trim();
+  }
   if(!u && !t){ toast("URLか投稿文を入力してください"); return; }
   state.drafts.unshift({url:u, text:t, done:false});
   document.getElementById("draftUrl").value="";
