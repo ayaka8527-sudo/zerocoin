@@ -17,6 +17,10 @@
   header{background:linear-gradient(135deg,var(--rakuten),var(--pink));color:#fff;padding:16px 16px 14px;
     position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(191,0,0,.25)}
   header h1{margin:0;font-size:17px;font-weight:800;letter-spacing:.5px}
+  .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .reload-btn{background:rgba(255,255,255,.22);color:#fff;border:none;border-radius:20px;
+    padding:7px 13px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .reload-btn:active{transform:scale(.95)}
   .head-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px}
   .date{font-size:13px;opacity:.95}
   .streak{font-size:13px;font-weight:700;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px}
@@ -118,6 +122,22 @@
     font-size:13px;font-weight:700;color:var(--txt);cursor:pointer}
   .notice{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:6px}
   .reset-link{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px;background:none;border:none;cursor:pointer;width:100%}
+  .app-ver{text-align:center;font-size:11px;color:var(--muted);padding:4px 0 14px}
+  /* 日別カレンダー */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .cal-nav button{border:none;background:#f0e8eb;border-radius:8px;padding:6px 16px;font-size:15px;font-weight:800;cursor:pointer;color:var(--rakuten)}
+  .cal-nav span{font-size:15px;font-weight:800}
+  .cal-weekhead,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cal-weekhead{margin-bottom:3px}
+  .cal-weekhead span{text-align:center;font-size:11px;color:var(--muted);font-weight:700}
+  .cal-cell{min-height:54px;background:#faf3f5;border-radius:7px;padding:3px 2px;overflow:hidden}
+  .cal-cell.empty{background:transparent}
+  .cal-cell.today{outline:2px solid var(--pink);background:#fff}
+  .cal-day{font-size:11px;font-weight:800;color:var(--txt);text-align:center}
+  .cal-counts{display:flex;flex-direction:column;align-items:center;gap:0;margin-top:1px;line-height:1.25}
+  .cal-counts span{font-size:9.5px;font-weight:800}
+  .c-like{color:var(--like)} .c-follow{color:var(--follow)} .c-post{color:var(--post)}
+  .cal-month-total{text-align:center;font-size:12.5px;font-weight:700;margin-top:10px;color:var(--txt)}
   .notif-banner{background:#fffbe6;border:1.5px solid #ffe08a;border-radius:12px;padding:11px;font-size:12.5px;
     display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .notif-banner button{margin-left:auto;background:var(--rakuten);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
@@ -129,7 +149,10 @@
 </head>
 <body>
 <header>
-  <h1>🛍️ 楽天ROOM 活動カウンター</h1>
+  <div class="title-row">
+    <h1>🛍️ 楽天ROOM 活動カウンター</h1>
+    <button class="reload-btn" onclick="reloadLatest()">🔄 更新</button>
+  </div>
   <div class="head-row">
     <span class="date" id="date"></span>
     <span class="streak" id="streak">🔥 連続0日</span>
@@ -225,6 +248,26 @@
     </div>
   </div>
 
+  <!-- 日別カレンダー -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">🗓️</span><span class="title">日別カレンダー</span></div>
+    <div class="cal-nav">
+      <button onclick="calShift(-1)">◀</button>
+      <span id="calLabel"></span>
+      <button onclick="calShift(1)">▶</button>
+    </div>
+    <div class="cal-weekhead">
+      <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-month-total" id="calTotal"></div>
+    <div class="legend">
+      <span><i style="background:var(--like)"></i>❤いいね</span>
+      <span><i style="background:var(--follow)"></i>👥フォロー</span>
+      <span><i style="background:var(--post)"></i>📝投稿</span>
+    </div>
+  </div>
+
   <!-- 設定（カレンダー） -->
   <div class="card">
     <div class="card-head"><span class="emoji">📅</span><span class="title">カレンダー通知</span></div>
@@ -254,6 +297,8 @@
     <button class="reset-link" onclick="resetAll()">― すべてのデータを消去 ―</button>
   </div>
 
+  <div class="app-ver">バージョン <span id="appVer"></span> ／ 最新にするには上の「🔄 更新」</div>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -266,9 +311,12 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
+const APP_VERSION="2026-06-22b（日別カレンダー・更新ボタン）";
 
 let state = load();
 let chartRange = 7;
+let calMonth = new Date(); calMonth.setDate(1);
+function reloadLatest(){ location.href = location.pathname + "?v=" + Date.now(); }
 
 function blankState(){
   return {
@@ -509,7 +557,8 @@ function render(){
   document.getElementById("date").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日(${wd})`;
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
-  renderPosting(); renderToday(); renderChart(); renderCumulative(); updateNotifBanner();
+  renderPosting(); renderToday(); renderChart(); renderCumulative(); renderCalendar(); updateNotifBanner();
+  document.getElementById("appVer").textContent=APP_VERSION;
 }
 
 function renderLimiter(which){
@@ -708,6 +757,37 @@ function renderCumulative(){
   document.getElementById("cumLike").textContent=l;
   document.getElementById("cumFollow").textContent=f;
   document.getElementById("cumPost").textContent=p;
+}
+
+/* ---------- 日別カレンダー ---------- */
+function calShift(d){ calMonth.setMonth(calMonth.getMonth()+d); renderCalendar(); }
+function renderCalendar(){
+  const y=calMonth.getFullYear(), m=calMonth.getMonth();
+  document.getElementById("calLabel").textContent=`${y}年${m+1}月`;
+  const startWd=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  const grid=document.getElementById("calGrid"); grid.innerHTML="";
+  for(let i=0;i<startWd;i++){ const c=document.createElement("div"); c.className="cal-cell empty"; grid.appendChild(c); }
+  const tk=todayKey();
+  let ml=0,mf=0,mp=0;
+  for(let d=1; d<=days; d++){
+    const key=dateKey(new Date(y,m,d).getTime());
+    const e=state.daily[key];
+    const c=document.createElement("div"); c.className="cal-cell"+(key===tk?" today":"");
+    let counts="";
+    if(e && (e.likes||e.follows||e.posts)){
+      ml+=e.likes; mf+=e.follows; mp+=e.posts;
+      counts=`<div class="cal-counts">`+
+        (e.likes?`<span class="c-like">❤${e.likes}</span>`:``)+
+        (e.follows?`<span class="c-follow">👥${e.follows}</span>`:``)+
+        (e.posts?`<span class="c-post">📝${e.posts}</span>`:``)+
+      `</div>`;
+    }
+    c.innerHTML=`<div class="cal-day">${d}</div>${counts}`;
+    grid.appendChild(c);
+  }
+  document.getElementById("calTotal").innerHTML=
+    `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`;
 }
 
 /* ---------- データ ---------- */
