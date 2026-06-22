@@ -6,6 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#bf0000">
 <title>楽天ROOM 活動カウンター</title>
+<link rel="apple-touch-icon" href="apple-touch-icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<link rel="manifest" href="manifest.json">
 <style>
   :root{
     --rakuten:#bf0000;--pink:#ff5b8a;--bg:#fff5f7;--card:#fff;--txt:#33272a;--muted:#9b8c92;
@@ -360,7 +364,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-06-22f（上部クイックナビ）";
+const APP_VERSION="2026-06-22g（クマ顔アイコン）";
 
 let state = load();
 if(!state.drafts) state.drafts=[];
