@@ -22,6 +22,11 @@
     padding:7px 13px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
   .reload-btn:active{transform:scale(.95)}
   .head-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px}
+  .rel-summary{display:flex;gap:8px;margin-top:8px}
+  .rel-item{flex:1;background:rgba(255,255,255,.18);border-radius:10px;padding:6px 8px;
+    display:flex;align-items:center;gap:6px;justify-content:center}
+  .rel-emoji{font-size:15px}
+  .rel-item b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
   .date{font-size:13px;opacity:.95}
   .streak{font-size:13px;font-weight:700;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px}
   .wrap{max-width:520px;margin:0 auto;padding:14px}
@@ -123,6 +128,26 @@
   .notice{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:6px}
   .reset-link{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px;background:none;border:none;cursor:pointer;width:100%}
   .app-ver{text-align:center;font-size:11px;color:var(--muted);padding:4px 0 14px}
+  /* 投稿ネタ */
+  .draft-input,.draft-textarea{width:100%;border:1.5px solid #e0d3d8;border-radius:11px;padding:11px;
+    font-size:14px;font-family:inherit;margin-bottom:8px;background:#fff;color:var(--txt)}
+  .draft-textarea{min-height:74px;resize:vertical}
+  .draft-add{background:var(--post)}
+  .draft-list{list-style:none;margin:12px 0 0;padding:0}
+  .draft-item{background:#faf3f5;border-radius:11px;padding:10px;margin-bottom:8px}
+  .draft-item.done{opacity:.55;background:#eef7f0}
+  .draft-empty{list-style:none;color:var(--muted);text-align:center;padding:8px;font-size:12.5px}
+  .draft-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
+  .draft-url{flex:1;font-size:12px;color:var(--follow);word-break:break-all}
+  .draft-text{flex:1;font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .dcopy{flex-shrink:0;border:none;background:#ffe3ec;color:var(--rakuten);border-radius:7px;
+    padding:5px 9px;font-size:11.5px;font-weight:800;cursor:pointer}
+  .draft-actions{display:flex;gap:8px;margin-top:4px}
+  .dtoggle{flex:1;border:1.5px solid var(--post);background:#fff;color:var(--post);border-radius:8px;
+    padding:7px;font-size:12px;font-weight:800;cursor:pointer}
+  .draft-item.done .dtoggle{border-color:var(--muted);color:var(--muted)}
+  .ddel{border:1.5px solid #e0b3bd;background:#fff;color:var(--bad);border-radius:8px;
+    padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer}
   /* 日別カレンダー */
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
   .cal-nav button{border:none;background:#f0e8eb;border-radius:8px;padding:6px 16px;font-size:15px;font-weight:800;cursor:pointer;color:var(--rakuten)}
@@ -156,6 +181,10 @@
   <div class="head-row">
     <span class="date" id="date"></span>
     <span class="streak" id="streak">🔥 連続0日</span>
+  </div>
+  <div class="rel-summary">
+    <div class="rel-item"><span class="rel-emoji">❤️</span><b id="sumLike">—</b></div>
+    <div class="rel-item"><span class="rel-emoji">👥</span><b id="sumFollow">—</b></div>
   </div>
 </header>
 
@@ -214,6 +243,15 @@
       <div class="post-input-label">投稿数を直接入力（＋−でも調整できます）</div>
       <div class="post-actions"><button class="pbtn stop" onclick="endPosting()">✅ 投稿おわり（記録）</button></div>
     </div>
+  </div>
+
+  <!-- 今日の投稿ネタ -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">🧷</span><span class="title">今日の投稿ネタ（URL・投稿文）</span><span class="badge ok" id="draftRemain"></span></div>
+    <input type="url" id="draftUrl" class="draft-input" placeholder="商品URL（https://...）" inputmode="url">
+    <textarea id="draftText" class="draft-textarea" placeholder="投稿文（紹介文）をここに"></textarea>
+    <button class="start-btn draft-add" onclick="addDraft()">＋ 保存する</button>
+    <ul class="draft-list" id="draftList"></ul>
   </div>
 
   <!-- 今日のラウンド -->
@@ -311,9 +349,10 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-06-22b（日別カレンダー・更新ボタン）";
+const APP_VERSION="2026-06-22c（解除サマリー・投稿ネタ保存）";
 
 let state = load();
+if(!state.drafts) state.drafts=[];
 let chartRange = 7;
 let calMonth = new Date(); calMonth.setDate(1);
 function reloadLatest(){ location.href = location.pathname + "?v=" + Date.now(); }
@@ -325,6 +364,7 @@ function blankState(){
     posting:{ active:false, startTs:null, count:0 },
     rounds: [],
     daily:  {},
+    drafts: [],   // {url, text, done}
   };
 }
 function load(){
@@ -557,8 +597,19 @@ function render(){
   document.getElementById("date").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日(${wd})`;
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
-  renderPosting(); renderToday(); renderChart(); renderCumulative(); renderCalendar(); updateNotifBanner();
+  renderPosting(); renderToday(); renderChart(); renderCumulative(); renderCalendar(); renderDrafts(); updateNotifBanner();
+  document.getElementById("sumLike").textContent=summaryText("like");
+  document.getElementById("sumFollow").textContent=summaryText("follow");
   document.getElementById("appVer").textContent=APP_VERSION;
+}
+function summaryText(which){
+  maybeReset(which);
+  const st=state[which], now=Date.now();
+  if(!st.firstTs) return "未開始";
+  const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which));
+  if(inWait(which)) return "解除 "+hm(st.stages[st.stages.length-1].releaseTs);
+  if(finished) return "再開 "+hm(st.firstTs+DAY);
+  return "開始OK";
 }
 
 function renderLimiter(which){
@@ -790,6 +841,59 @@ function renderCalendar(){
     `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`;
 }
 
+/* ---------- 今日の投稿ネタ（URL・投稿文） ---------- */
+function addDraft(){
+  const u=document.getElementById("draftUrl").value.trim();
+  const t=document.getElementById("draftText").value.trim();
+  if(!u && !t){ toast("URLか投稿文を入力してください"); return; }
+  state.drafts.unshift({url:u, text:t, done:false});
+  document.getElementById("draftUrl").value="";
+  document.getElementById("draftText").value="";
+  save(); render(); toast("投稿ネタを保存しました ✅");
+}
+function deleteDraft(i){ state.drafts.splice(i,1); save(); render(); toast("削除しました"); }
+function toggleDraftDone(i){ state.drafts[i].done=!state.drafts[i].done; save(); render(); }
+function copyDraftUrl(i){ copyText(state.drafts[i].url); }
+function copyDraftText(i){ copyText(state.drafts[i].text); }
+function copyText(s){
+  if(!s){ toast("コピーする内容がありません"); return; }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(s).then(()=>toast("コピーしました 📋")).catch(()=>fallbackCopy(s));
+  }else fallbackCopy(s);
+}
+function fallbackCopy(s){
+  const ta=document.createElement("textarea"); ta.value=s; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand("copy"); toast("コピーしました 📋"); }catch(e){ toast("コピーできませんでした"); }
+  document.body.removeChild(ta);
+}
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function renderDrafts(){
+  const list=document.getElementById("draftList");
+  const drafts=state.drafts||[];
+  const remain=drafts.filter(d=>!d.done).length;
+  document.getElementById("draftRemain").textContent=`未投稿 ${remain} 件 / 全 ${drafts.length} 件`;
+  list.innerHTML="";
+  if(drafts.length===0){
+    list.innerHTML='<li class="draft-empty">まだ投稿ネタがありません</li>'; return;
+  }
+  drafts.forEach((d,i)=>{
+    const li=document.createElement("li"); li.className="draft-item"+(d.done?" done":"");
+    const urlRow = d.url
+      ? `<div class="draft-row"><a href="${esc(d.url)}" target="_blank" rel="noopener" class="draft-url">${esc(d.url)}</a>`+
+        `<button class="dcopy" onclick="copyDraftUrl(${i})">コピー</button></div>` : "";
+    const textRow = d.text
+      ? `<div class="draft-row"><span class="draft-text">${esc(d.text)}</span>`+
+        `<button class="dcopy" onclick="copyDraftText(${i})">コピー</button></div>` : "";
+    li.innerHTML=urlRow+textRow+
+      `<div class="draft-actions">`+
+        `<button class="dtoggle" onclick="toggleDraftDone(${i})">${d.done?"↩︎ 戻す":"✓ 投稿済み"}</button>`+
+        `<button class="ddel" onclick="deleteDraft(${i})">削除</button>`+
+      `</div>`;
+    list.appendChild(li);
+  });
+}
+
 /* ---------- データ ---------- */
 function exportData(){
   const a=document.createElement("a");
@@ -800,7 +904,7 @@ function importData(ev){
   const f=ev.target.files[0]; if(!f) return;
   const rd=new FileReader();
   rd.onload=()=>{ try{ const s=JSON.parse(rd.result); if(!s.like||!s.daily) throw 0;
-    state=s; save(); render(); toast("インポートしました ✅"); }catch(e){ toast("⚠️ 読み込めませんでした"); } };
+    state=s; if(!state.drafts) state.drafts=[]; save(); render(); toast("インポートしました ✅"); }catch(e){ toast("⚠️ 読み込めませんでした"); } };
   rd.readAsText(f); ev.target.value="";
 }
 function resetAll(){
