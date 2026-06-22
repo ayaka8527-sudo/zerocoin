@@ -42,6 +42,16 @@
   .like .start-btn{background:var(--like)}
   .follow .start-btn{background:var(--follow)}
   .post .start-btn,.pbtn.start{background:var(--post)}
+  .release-banner{border-radius:14px;padding:12px;margin:0 0 12px;text-align:center;line-height:1.3}
+  .release-banner b{display:block;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;margin:2px 0}
+  .release-banner small{font-size:12.5px;opacity:.8}
+  .release-banner.wait{background:#fff3e6;color:var(--warn)}
+  .release-banner.done{background:#fdecea;color:var(--bad)}
+  .end-day-btn{width:100%;margin-top:8px;border:1.5px dashed #cbb;background:#faf7f8;color:#7a6b70;
+    border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer}
+  .end-day-btn:active{transform:scale(.97)}
+  .end-day-btn:disabled{opacity:.4;cursor:not-allowed}
+  .end-day-btn.on{border-style:solid;border-color:var(--rakuten);color:var(--rakuten);background:#fff0f3}
   .sub-btns{display:flex;gap:8px;margin-top:8px}
   .sub-btn{flex:1;border:1.5px solid #e0d3d8;background:#fff;border-radius:11px;padding:11px;
     font-size:13px;font-weight:800;cursor:pointer;transition:transform .08s,opacity .2s}
@@ -138,11 +148,13 @@
     <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
     <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
+    <div class="release-banner" id="likeBanner" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
     <div class="sub-btns">
       <button class="sub-btn spare" id="likeSpareBtn" onclick="pressSpare('like')">＋予備で開始（200）</button>
       <button class="sub-btn cancel" id="likeCancelBtn" onclick="cancelLast('like')">↩︎ 直前を取消</button>
     </div>
+    <button class="end-day-btn" id="likeEndBtn" onclick="endDay('like')">🔚 本日終了にする</button>
     <ul class="stage-list" id="likeStages"></ul>
     <div class="status-line ok" id="likeStatus">開始ボタンを押すと記録スタート</div>
   </div>
@@ -152,11 +164,13 @@
     <div class="card-head"><span class="emoji">👥</span><span class="title">フォロー</span><span class="badge" id="followBadge"></span></div>
     <div class="progress-num"><b id="followDone">0</b> / 10 回　（100×10＝1000）</div>
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
+    <div class="release-banner" id="followBanner" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
     <div class="sub-btns">
       <button class="sub-btn spare" id="followSpareBtn" onclick="pressSpare('follow')">＋予備で開始（100）</button>
       <button class="sub-btn cancel" id="followCancelBtn" onclick="cancelLast('follow')">↩︎ 直前を取消</button>
     </div>
+    <button class="end-day-btn" id="followEndBtn" onclick="endDay('follow')">🔚 本日終了にする</button>
     <ul class="stage-list" id="followStages"></ul>
     <div class="status-line ok" id="followStatus">開始ボタンを押すと記録スタート</div>
   </div>
@@ -258,8 +272,8 @@ let chartRange = 7;
 
 function blankState(){
   return {
-    like:   { firstTs:null, stages:[] },   // stages: {startTs, releaseTs, cap, notified}
-    follow: { firstTs:null, stages:[] },
+    like:   { firstTs:null, stages:[], ended:false },   // stages: {startTs, releaseTs, cap, notified}
+    follow: { firstTs:null, stages:[], ended:false },
     posting:{ active:false, startTs:null, count:0 },
     rounds: [],
     daily:  {},
@@ -285,7 +299,7 @@ const todayKey=()=>dateKey(Date.now());
 /* ---------- 上限ロジック（開始ボタン式） ---------- */
 function maybeReset(which){
   const st=state[which];
-  if(st.firstTs && Date.now()>=st.firstTs+DAY){ st.firstTs=null; st.stages=[]; return true; }
+  if(st.firstTs && Date.now()>=st.firstTs+DAY){ st.firstTs=null; st.stages=[]; st.ended=false; return true; }
   return false;
 }
 function inWait(which){
@@ -343,6 +357,14 @@ function cancelLast(which){
     render();
     setTimeout(()=>{ if(Date.now()-cancelArm[which]>=CANCEL_WINDOW){ cancelArm[which]=0; render(); } }, CANCEL_WINDOW+100);
   }
+}
+function endDay(which){
+  const st=state[which];
+  if(!st.firstTs){ toast("まだ開始していません"); return; }
+  if(st.ended){ st.ended=false; save(); render(); toast("本日終了を取り消しました"); return; }
+  st.ended=true; save(); render();
+  registerReset(which);   // 翌日の解除（リセット）時刻をカレンダー登録
+  toast("本日終了。翌日の解除をカレンダーに登録します");
 }
 function bumpDaily(field,ts,d){
   const k=dateKey(ts);
@@ -500,6 +522,22 @@ function renderLimiter(which){
   document.getElementById(which+"Done").textContent=stdDone+(spUsed?"+予備":"");
   document.getElementById(which+"Meter").style.width=Math.min(100,startedCap/dayMax*100)+"%";
 
+  const finished = st.ended || (stdDone>=total && !waiting);
+  const resetTs = st.firstTs ? st.firstTs+DAY : null;
+
+  // 解除時刻バナー（目立つ表示）
+  const banner=document.getElementById(which+"Banner");
+  if(waiting){
+    const last=st.stages[st.stages.length-1];
+    banner.style.display="block"; banner.className="release-banner wait";
+    banner.innerHTML=`⏰ 次の解除 <b>${hm(last.releaseTs)}</b><small>あと ${countdown(last.releaseTs-now)}</small>`;
+  }else if(finished && resetTs){
+    banner.style.display="block"; banner.className="release-banner done";
+    banner.innerHTML=`🔁 次に開始できる <b>${hm(resetTs)}</b><small>あと ${countdown(resetTs-now)}</small>`;
+  }else{
+    banner.style.display="none";
+  }
+
   // ステージ一覧（開始した順＋未開始の規定枠）
   const list=document.getElementById(which+"Stages"); list.innerHTML="";
   let stdSeen=0;
@@ -526,13 +564,16 @@ function renderLimiter(which){
 
   // メインの開始ボタン
   const btn=document.getElementById(which+"Btn");
-  if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
+  if(finished){
+    btn.disabled=true; btn.textContent=`🔁 次の開始まで ${countdown(resetTs-now)}`;
+  }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
   else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
 
   // 予備ボタン・取消ボタン
   const sp=document.getElementById(which+"SpareBtn");
-  if(spUsed){ sp.disabled=true; sp.textContent="予備：使用済み"; }
+  if(finished){ sp.disabled=true; sp.textContent= spUsed?"予備：使用済み":"本日終了"; }
+  else if(spUsed){ sp.disabled=true; sp.textContent="予備：使用済み"; }
   else if(waiting){ sp.disabled=true; sp.textContent="＋予備（待機中）"; }
   else{ sp.disabled=false; sp.textContent=`＋予備で開始（${cfg.spareCap}）`; }
   const cb=document.getElementById(which+"CancelBtn");
@@ -543,26 +584,38 @@ function renderLimiter(which){
     cb.textContent="↩︎ 直前を取消"; cb.classList.remove("armed");
   }
 
+  // 本日終了ボタン
+  const eb=document.getElementById(which+"EndBtn");
+  if(!st.firstTs){ eb.disabled=true; eb.textContent="🔚 本日終了にする"; eb.classList.remove("on"); }
+  else if(st.ended){ eb.disabled=false; eb.textContent="↩︎ 本日終了を取り消す"; eb.classList.add("on"); }
+  else{ eb.disabled=false; eb.textContent="🔚 本日終了にする（明日の解除を登録）"; eb.classList.remove("on"); }
+
   // ステータス＆バッジ
   const statusEl=document.getElementById(which+"Status");
   const badge=document.getElementById(which+"Badge");
-  if(stdDone>=total && spUsed){
+  if(finished){
+    // 完了 or 本日終了 → 次に開始できる時刻を表示。その時刻になると開始ボタンが再び押せる
+    const heading = (st.ended && stdDone<total)
+      ? `🔚 本日終了（${stdDone}回で終了）`
+      : `🎉 本日の${cfg.name}は完了！（全${total}回）`;
     badge.className="badge bad"; badge.textContent="本日終了";
     statusEl.className="status-line done";
-    statusEl.innerHTML=`🔁 リセット ${hm(st.firstTs+DAY)} ごろ（あと${countdown(st.firstTs+DAY-now)}）<br>`+
-      `<button class="mini-cal" onclick="registerReset('${which}')">📅 カレンダーに追加</button>`;
+    statusEl.innerHTML=
+      `${heading}<br>`+
+      `🔁 次に開始できる時間：<b>${hm(resetTs)}</b>（あと${countdown(resetTs-now)}）<br>`+
+      `▶️ その時間になると「1回目」から再開できます`+
+      ((!spUsed && !st.ended)?`<br><span style="color:var(--muted)">※予備（${cfg.spareCap}）はまだ使えます</span>`:``)+
+      `<br><button class="mini-cal" onclick="registerReset('${which}')">📅 開始できる時刻をカレンダーに追加</button>`;
   }else if(waiting){
     const last=st.stages[st.stages.length-1];
+    const finalRound = stdDone>=total;
     badge.className="badge warn"; badge.textContent="実施中";
     statusEl.className="status-line wait";
-    statusEl.innerHTML=`実施中 ／ ${hm(last.releaseTs)} に解除<br>`+
+    statusEl.innerHTML=`実施中 ／ ${hm(last.releaseTs)} に解除`+(finalRound?`（これで本日完了）`:``)+`<br>`+
       `<button class="mini-cal" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 カレンダーに追加</button>`;
   }else if(st.stages.length===0){
     badge.className="badge ok"; badge.textContent="準備OK";
     statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
-  }else if(stdDone>=total){
-    badge.className="badge ok"; badge.textContent="予備OK";
-    statusEl.className="status-line ok"; statusEl.textContent="規定完了！必要なら「予備」を開始できます";
   }else{
     badge.className="badge ok"; badge.textContent="解除済み";
     statusEl.className="status-line ok"; statusEl.textContent=`解除済み！${stdDone+1}回目を開始できます`;
