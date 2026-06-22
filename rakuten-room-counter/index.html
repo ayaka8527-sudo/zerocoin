@@ -349,7 +349,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-06-22c（解除サマリー・投稿ネタ保存）";
+const APP_VERSION="2026-06-22d（URL自動補正）";
 
 let state = load();
 if(!state.drafts) state.drafts=[];
@@ -842,8 +842,9 @@ function renderCalendar(){
 }
 
 /* ---------- 今日の投稿ネタ（URL・投稿文） ---------- */
+function normUrl(u){ u=(u||"").trim(); if(u && !/^https?:\/\//i.test(u)) u="https://"+u.replace(/^\/+/,""); return u; }
 function addDraft(){
-  const u=document.getElementById("draftUrl").value.trim();
+  const u=normUrl(document.getElementById("draftUrl").value);
   const t=document.getElementById("draftText").value.trim();
   if(!u && !t){ toast("URLか投稿文を入力してください"); return; }
   state.drafts.unshift({url:u, text:t, done:false});
@@ -853,7 +854,7 @@ function addDraft(){
 }
 function deleteDraft(i){ state.drafts.splice(i,1); save(); render(); toast("削除しました"); }
 function toggleDraftDone(i){ state.drafts[i].done=!state.drafts[i].done; save(); render(); }
-function copyDraftUrl(i){ copyText(state.drafts[i].url); }
+function copyDraftUrl(i){ copyText(normUrl(state.drafts[i].url)); }
 function copyDraftText(i){ copyText(state.drafts[i].text); }
 function copyText(s){
   if(!s){ toast("コピーする内容がありません"); return; }
@@ -880,7 +881,7 @@ function renderDrafts(){
   drafts.forEach((d,i)=>{
     const li=document.createElement("li"); li.className="draft-item"+(d.done?" done":"");
     const urlRow = d.url
-      ? `<div class="draft-row"><a href="${esc(d.url)}" target="_blank" rel="noopener" class="draft-url">${esc(d.url)}</a>`+
+      ? `<div class="draft-row"><a href="${esc(normUrl(d.url))}" target="_blank" rel="noopener" class="draft-url">${esc(d.url)}</a>`+
         `<button class="dcopy" onclick="copyDraftUrl(${i})">コピー</button></div>` : "";
     const textRow = d.text
       ? `<div class="draft-row"><span class="draft-text">${esc(d.text)}</span>`+
