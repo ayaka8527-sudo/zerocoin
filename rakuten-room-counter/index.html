@@ -72,6 +72,9 @@
   .finish-btn{width:100%;margin-top:8px;border:none;border-radius:14px;padding:15px;font-size:15px;
     font-weight:900;color:#fff;background:var(--ok);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)}
   .finish-btn:active{transform:scale(.97)}
+  .half-btn{width:100%;margin-top:8px;border:none;border-radius:14px;padding:13px;font-size:14px;
+    font-weight:900;color:#fff;background:var(--warn);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+  .half-btn:active{transform:scale(.97)}
   .start-btn.extra{margin-top:8px;background:#e67e22 !important}
   .cnt{font-size:10.5px;font-weight:800}
   .cnt.full{color:var(--ok)}
@@ -229,6 +232,7 @@
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
     <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
+    <button class="half-btn" id="likeHalfBtn" onclick="halfStage('like')" style="display:none">🌓 半分で終了</button>
     <button class="start-btn extra" id="likeExtraBtn" onclick="pressExtra('like')" style="display:none">▶ 残りを開始</button>
     <div class="sub-btns">
       <button class="sub-btn spare" id="likeSpareBtn" onclick="pressSpare('like')">＋予備で開始（200）</button>
@@ -247,6 +251,7 @@
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
     <button class="finish-btn" id="followFinishBtn" onclick="finishStage('follow')" style="display:none">✅ 終了する</button>
+    <button class="half-btn" id="followHalfBtn" onclick="halfStage('follow')" style="display:none">🌓 半分で終了</button>
     <button class="start-btn extra" id="followExtraBtn" onclick="pressExtra('follow')" style="display:none">▶ 残りを開始</button>
     <div class="sub-btns">
       <button class="sub-btn spare" id="followSpareBtn" onclick="pressSpare('follow')">＋予備で開始（100）</button>
@@ -381,7 +386,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-04a（本日終了後も✅終了できるよう修正）";
+const APP_VERSION="2026-07-04b（🌓半分で終了ボタン）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -522,10 +527,19 @@ function finishStage(which){
   const s=st.stages[st.stages.length-1];
   if(s.finished){ toast("この回は終了済みです"); return; }
   const add=s.cap-countedOf(s);
-  s.counted=s.cap; s.finished=true;
+  s.counted=s.cap; s.finished=true; s.closed=true;
   if(add>0) bumpDaily(which==="like"?"likes":"follows", s.startTs, +add);
   save(); render();
   toast("✅ 終了！満了 "+s.cap+" をカウントしました");
+}
+function halfStage(which){
+  const st=state[which];
+  if(st.stages.length===0){ toast("開始していません"); return; }
+  const s=st.stages[st.stages.length-1];
+  if(s.finished||s.closed){ toast("この回は確定済みです"); return; }
+  s.closed=true;   // 半分のまま確定（countedは開始時の半分のまま）
+  save(); render();
+  toast("🌓 半分（"+countedOf(s)+"）で確定。残り"+(s.cap-countedOf(s))+"は「▶ 残りを開始」で使えます");
 }
 let cancelArm={like:0,follow:0};
 const CANCEL_WINDOW=2500;
@@ -752,7 +766,9 @@ function renderLimiter(which){
     const label = s.spare ? "予備" : s.extra ? "追加" : (++stdSeen)+"回目";
     const cnt = s.finished
       ? `<span class="cnt full">✅満了 ${countedOf(s)}</span>`
-      : `<span class="cnt halfc">半分 ${countedOf(s)}/${s.cap}</span>`;
+      : s.closed
+        ? `<span class="cnt halfc">🌓半分で確定 ${countedOf(s)}/${s.cap}</span>`
+        : `<span class="cnt halfc">半分 ${countedOf(s)}/${s.cap}</span>`;
     const tail = released
       ? `<span class="tail done">解除済み</span>`+
         `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`
@@ -781,15 +797,18 @@ function renderLimiter(which){
   else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
   else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
 
-  // 終了ボタン（満了カウント）※本日終了の後でも押せる
+  // 終了ボタン（満了/半分）※本日終了の後でも押せる
   const fb=document.getElementById(which+"FinishBtn");
+  const hb=document.getElementById(which+"HalfBtn");
   const lastS=st.stages[st.stages.length-1];
-  if(lastS && !lastS.finished){
+  if(lastS && !lastS.finished && !lastS.closed){
     fb.style.display="block";
     fb.textContent = waiting
       ? `✅ 終了する（満了 ${lastS.cap} をカウント）`
       : `✅ 終了にする（＋${lastS.cap-countedOf(lastS)} で満了）`;
-  }else fb.style.display="none";
+    hb.style.display="block";
+    hb.textContent=`🌓 半分で終了（${countedOf(lastS)} のまま確定）`;
+  }else{ fb.style.display="none"; hb.style.display="none"; }
 
   // 残り枠の開始ボタン
   const xb=document.getElementById(which+"ExtraBtn");
