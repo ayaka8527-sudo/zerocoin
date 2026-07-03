@@ -381,7 +381,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-03c（フォロー上限800に修正）";
+const APP_VERSION="2026-07-04a（本日終了後も✅終了できるよう修正）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -781,10 +781,10 @@ function renderLimiter(which){
   else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
   else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
 
-  // 終了ボタン（満了カウント）
+  // 終了ボタン（満了カウント）※本日終了の後でも押せる
   const fb=document.getElementById(which+"FinishBtn");
   const lastS=st.stages[st.stages.length-1];
-  if(lastS && !lastS.finished && !st.ended){
+  if(lastS && !lastS.finished){
     fb.style.display="block";
     fb.textContent = waiting
       ? `✅ 終了する（満了 ${lastS.cap} をカウント）`
