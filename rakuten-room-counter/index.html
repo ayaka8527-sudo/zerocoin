@@ -386,7 +386,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-04b（🌓半分で終了ボタン）";
+const APP_VERSION="2026-07-04c（解除時刻＝24h後と最終回解除の遅い方）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -437,8 +437,20 @@ const todayKey=()=>dateKey(Date.now());
 /* ---------- 上限ロジック（開始ボタン式） ---------- */
 function maybeReset(which){
   const st=state[which];
-  if(st.firstTs && Date.now()>=st.firstTs+DAY){ st.firstTs=null; st.stages=[]; st.ended=false; return true; }
+  const rt=resetTsOf(which);
+  if(st.firstTs && rt && Date.now()>=rt){ st.firstTs=null; st.stages=[]; st.ended=false; return true; }
   return false;
+}
+// 次に開始できる時刻＝「1回目の開始＋24時間」と「最終回の解除（開始＋1時間）」の遅い方
+function resetTsOf(which){
+  const st=state[which];
+  if(!st.firstTs) return null;
+  let t=st.firstTs+DAY;
+  if(st.stages.length){
+    const last=st.stages[st.stages.length-1];
+    if(last.releaseTs>t) t=last.releaseTs;
+  }
+  return t;
 }
 function inWait(which){
   const st=state[which];
@@ -635,7 +647,7 @@ function releaseMsg(which,i){
   if(s.spare) return "予備の枠が終了しました🎉";
   if(s.extra) return "残り枠が終了しました🎉";
   const pos=stdPosOf(which,i);
-  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 リセットは "+(st.firstTs?hm(st.firstTs+DAY):"-")+" ごろ";
+  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 リセットは "+(st.firstTs?hm(resetTsOf(which)):"-")+" ごろ";
   return "解除！"+(pos+1)+"回目（"+cfg.counts[pos]+"）を開始OK";
 }
 function alarmTitleFor(which,i){
@@ -650,7 +662,7 @@ function reRegisterStage(which,i){ registerStageAlarm(which,i); }
 function registerReset(which){
   const st=state[which];
   if(!st.firstTs) return;
-  downloadICS(`${CFG[which].emoji} ${CFG[which].name}リセット完了！また活動できます`, st.firstTs+DAY, "楽天ROOM 活動カウンター", "リセットアラーム");
+  downloadICS(`${CFG[which].emoji} ${CFG[which].name}リセット完了！また活動できます`, resetTsOf(which), "楽天ROOM 活動カウンター", "リセットアラーム");
   toast("📅 リセット時刻をカレンダーに登録");
 }
 function toggleCal(el){
@@ -726,7 +738,7 @@ function summaryText(which){
   if(!st.firstTs) return "未開始";
   const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which) && poolOf(which)<=0);
   if(inWait(which)) return "解除 "+hm(st.stages[st.stages.length-1].releaseTs);
-  if(finished) return "再開 "+hm(st.firstTs+DAY);
+  if(finished) return "再開 "+hm(resetTsOf(which));
   return "開始OK";
 }
 
@@ -742,7 +754,7 @@ function renderLimiter(which){
   document.getElementById(which+"Meter").style.width=Math.min(100,countedTotal/dayMax*100)+"%";
 
   const finished = st.ended || (stdDone>=total && !waiting && pool<=0);
-  const resetTs = st.firstTs ? st.firstTs+DAY : null;
+  const resetTs = resetTsOf(which);
 
   // 解除時刻バナー（目立つ表示）
   const banner=document.getElementById(which+"Banner");
