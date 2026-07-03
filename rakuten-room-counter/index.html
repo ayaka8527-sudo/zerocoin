@@ -194,6 +194,7 @@
   .fc-save{border:none;border-radius:12px;background:var(--follow);color:#fff;font-weight:900;
     padding:0 24px;font-size:15px;cursor:pointer}
   .fc-save:active{transform:scale(.95)}
+  .fc-unit{align-self:center;font-size:18px;font-weight:900;color:var(--follow)}
   .cal-fc{text-align:center;font-size:9px;font-weight:800;color:#8e44ad;line-height:1.2;margin-top:1px}
   .c-fc{color:#8e44ad}
   .c-fcd{display:block;font-size:9.5px}
@@ -240,10 +241,11 @@
   <div class="card">
     <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー数</span><span class="badge warn" id="fcDelta">未入力</span></div>
     <div class="fc-row">
-      <input type="number" id="fcInput" class="fc-input" inputmode="numeric" placeholder="例 1234">
+      <input type="number" id="fcInput" class="fc-input" inputmode="decimal" step="0.1" placeholder="例 17.3">
+      <span class="fc-unit">K</span>
       <button class="fc-save" onclick="saveFollowerCount()">保存</button>
     </div>
-    <div class="notice">毎日最初に入力すると、日別カレンダーに前日からの増加数（+◯）が並びます。同じ日に入れ直すと上書きされます。</div>
+    <div class="notice">千単位（K）で入力します。例：17.3 → 17.3K（17,300人）。毎日最初に入力すると、日別カレンダーに前日比（+0.2Kなど）が並びます。同じ日に入れ直すと上書きされます。</div>
   </div>
 
   <!-- いいね -->
@@ -408,7 +410,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-04d（フォロワー数の毎日記録・前日比）";
+const APP_VERSION="2026-07-04e（フォロワー数K表示・17.3形式入力）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1029,8 +1031,8 @@ function renderCalendar(){
     if(fv!=null){
       fkeys.push(key);
       const fd=followerDelta(key);
-      fc=`<div class="cal-fc">👤${fv}`+
-         (fd!=null?`<span class="c-fcd ${fd>=0?"up":"down"}">${fd>=0?"+":""}${fd}</span>`:``)+
+      fc=`<div class="cal-fc">👤${fmtK(fv)}`+
+         (fd!=null?`<span class="c-fcd ${fd>=0?"up":"down"}">${fmtKDelta(fd)}</span>`:``)+
          `</div>`;
     }
     c.innerHTML=`<div class="cal-day">${d}</div>${counts}${fc}`;
@@ -1042,7 +1044,7 @@ function renderCalendar(){
     const lastV=state.followers[fkeys[fkeys.length-1]];
     const base=prevFollowerVal(fkeys[0]);
     const net=lastV-(base!=null?base:firstV);
-    fcTotal=`　<span class="c-fc">👤${net>=0?"+":""}${net}</span>`;
+    fcTotal=`　<span class="c-fc">👤${fmtKDelta(net)}</span>`;
   }
   document.getElementById("calTotal").innerHTML=
     `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`+fcTotal;
@@ -1063,22 +1065,31 @@ function followerDelta(key){
   const p=prevFollowerVal(key);
   return (v!=null && p!=null) ? v-p : null;
 }
+function fmtK(n){
+  const s=(Math.round(n/100)/10).toFixed(1).replace(/\.0$/,"");
+  return s+"K";
+}
+function fmtKDelta(d){
+  return (d<0?"-":"+")+fmtK(Math.abs(d));
+}
 function saveFollowerCount(){
-  const v=parseInt(document.getElementById("fcInput").value,10);
-  if(isNaN(v)||v<0){ toast("フォロワー数を入力してください"); return; }
+  const raw=parseFloat(document.getElementById("fcInput").value);
+  if(isNaN(raw)||raw<0){ toast("フォロワー数を入力してください（例 17.3）"); return; }
+  // 1000未満はK入力（17.3→17300）、1000以上はそのままの人数として扱う
+  const v = raw<1000 ? Math.round(raw*1000) : Math.round(raw);
   state.followers[todayKey()]=v;
   save(); render();
   const d=followerDelta(todayKey());
-  toast("👤 フォロワー数 "+v+" を記録"+(d!=null?"（前日比 "+(d>=0?"+":"")+d+"）":""));
+  toast("👤 "+fmtK(v)+" を記録"+(d!=null?"（前日比 "+fmtKDelta(d)+"）":""));
 }
 function renderFollowerCard(){
   const inp=document.getElementById("fcInput");
   const v=state.followers[todayKey()];
-  if(document.activeElement!==inp) inp.value = v!=null ? v : "";
+  if(document.activeElement!==inp) inp.value = v!=null ? (Math.round(v/100)/10) : "";
   const badge=document.getElementById("fcDelta");
   if(v!=null){
     const d=followerDelta(todayKey());
-    badge.textContent = d!=null ? "前日比 "+(d>=0?"+":"")+d : "記録済み";
+    badge.textContent = d!=null ? "前日比 "+fmtKDelta(d) : fmtK(v)+" 記録済み";
     badge.className = "badge "+((d!=null&&d<0)?"bad":"ok");
   }else{
     badge.textContent="未入力"; badge.className="badge warn";
