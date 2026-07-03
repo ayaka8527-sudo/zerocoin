@@ -69,6 +69,13 @@
   .end-day-btn:active{transform:scale(.97)}
   .end-day-btn:disabled{opacity:.4;cursor:not-allowed}
   .end-day-btn.on{border-style:solid;border-color:var(--rakuten);color:var(--rakuten);background:#fff0f3}
+  .finish-btn{width:100%;margin-top:8px;border:none;border-radius:14px;padding:15px;font-size:15px;
+    font-weight:900;color:#fff;background:var(--ok);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .finish-btn:active{transform:scale(.97)}
+  .start-btn.extra{margin-top:8px;background:#e67e22 !important}
+  .cnt{font-size:10.5px;font-weight:800}
+  .cnt.full{color:var(--ok)}
+  .cnt.halfc{color:var(--warn)}
   .sub-btns{display:flex;gap:8px;margin-top:8px}
   .sub-btn{flex:1;border:1.5px solid #e0d3d8;background:#fff;border-radius:11px;padding:11px;
     font-size:13px;font-weight:800;cursor:pointer;transition:transform .08s,opacity .2s}
@@ -156,6 +163,11 @@
   .draft-item.done .dtoggle{border-color:var(--muted);color:var(--muted)}
   .ddel{border:1.5px solid #e0b3bd;background:#fff;color:var(--bad);border-radius:8px;
     padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer}
+  .dedit{flex:1;border:1.5px solid var(--follow);background:#fff;color:var(--follow);border-radius:8px;
+    padding:7px;font-size:12px;font-weight:800;cursor:pointer}
+  .dshow{border:none;background:#f0e8eb;color:var(--muted);border-radius:8px;
+    padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer}
+  .draft-item.editing{outline:2px solid var(--follow);background:#eef5fd}
   /* 日別カレンダー */
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
   .cal-nav button{border:none;background:#f0e8eb;border-radius:8px;padding:6px 16px;font-size:15px;font-weight:800;cursor:pointer;color:var(--rakuten)}
@@ -216,6 +228,8 @@
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
+    <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
+    <button class="start-btn extra" id="likeExtraBtn" onclick="pressExtra('like')" style="display:none">▶ 残りを開始</button>
     <div class="sub-btns">
       <button class="sub-btn spare" id="likeSpareBtn" onclick="pressSpare('like')">＋予備で開始（200）</button>
       <button class="sub-btn cancel" id="likeCancelBtn" onclick="cancelLast('like')">↩︎ 直前を取消</button>
@@ -232,6 +246,8 @@
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
+    <button class="finish-btn" id="followFinishBtn" onclick="finishStage('follow')" style="display:none">✅ 終了する</button>
+    <button class="start-btn extra" id="followExtraBtn" onclick="pressExtra('follow')" style="display:none">▶ 残りを開始</button>
     <div class="sub-btns">
       <button class="sub-btn spare" id="followSpareBtn" onclick="pressSpare('follow')">＋予備で開始（100）</button>
       <button class="sub-btn cancel" id="followCancelBtn" onclick="cancelLast('follow')">↩︎ 直前を取消</button>
@@ -264,7 +280,8 @@
     <div class="card-head"><span class="emoji">🧷</span><span class="title">今日の投稿ネタ（URL・投稿文）</span><span class="badge ok" id="draftRemain"></span></div>
     <input type="text" id="draftUrl" class="draft-input" placeholder="商品URL（楽天の共有文をそのまま貼ってもOK）">
     <textarea id="draftText" class="draft-textarea" placeholder="投稿文（紹介文）。空ならURL欄の文章から自動で入ります"></textarea>
-    <button class="start-btn draft-add" onclick="addDraft()">＋ 保存する</button>
+    <button class="start-btn draft-add" id="draftAddBtn" onclick="addDraft()">＋ 保存する</button>
+    <button class="end-day-btn" id="draftEditCancel" onclick="cancelEditDraft()" style="display:none">✖ 編集をやめる</button>
     <div class="notice" style="margin-top:4px">楽天の「共有」で出る文章（タイトル＋URL）を上の欄に貼って保存すると、URLだけ自動で取り出します。</div>
     <ul class="draft-list" id="draftList"></ul>
   </div>
@@ -364,10 +381,17 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-06-22g（クマ顔アイコン）";
+const APP_VERSION="2026-07-03a（終了ボタン式カウント・投稿ネタ編集）";
 
-let state = load();
-if(!state.drafts) state.drafts=[];
+function migrate(s){
+  ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
+    if(x.counted==null){ x.counted=x.cap; x.finished=true; }
+    if(x.extra==null) x.extra=false;
+  }); });
+  if(!s.drafts) s.drafts=[];
+  return s;
+}
+let state = migrate(load());
 let chartRange = 7;
 let calMonth = new Date(); calMonth.setDate(1);
 function reloadLatest(){ location.href = location.pathname + "?v=" + Date.now(); }
@@ -416,8 +440,17 @@ function inWait(which){
   if(st.stages.length===0) return false;
   return Date.now() < st.stages[st.stages.length-1].releaseTs;
 }
-function standardDone(which){ return state[which].stages.filter(s=>!s.spare).length; }
+function standardDone(which){ return state[which].stages.filter(s=>!s.spare&&!s.extra).length; }
 function spareUsed(which){ return state[which].stages.some(s=>s.spare); }
+function half(cap){ return Math.ceil(cap/2); }
+function countedOf(s){ return s.counted!=null ? s.counted : s.cap; }
+// 残り枠：開始した規定/予備の満額 − 実際にカウントした合計
+function poolOf(which){
+  const st=state[which];
+  const entitled=st.stages.filter(s=>!s.extra).reduce((a,s)=>a+s.cap,0);
+  const counted=st.stages.reduce((a,s)=>a+countedOf(s),0);
+  return Math.max(0, entitled-counted);
+}
 
 function press(which){
   maybeReset(which);
@@ -426,12 +459,13 @@ function press(which){
   if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
   if(!st.firstTs) st.firstTs=now;
   const cap=cfg.counts[standardDone(which)];
-  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, spare:false, notified:false });
-  bumpDaily(which==="like"?"likes":"follows", now, +cap);
+  const c=half(cap);
+  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, counted:c, finished:false, spare:false, extra:false, notified:false });
+  bumpDaily(which==="like"?"likes":"follows", now, +c);
   askNotify(true);
   save(); render();
   if(calEnabled) registerStageAlarm(which, st.stages.length-1);
-  toast(cfg.emoji+" "+standardDone(which)+"回目スタート！解除は "+hm(now+HOUR));
+  toast(cfg.emoji+" "+standardDone(which)+"回目スタート（まず半分"+c+"）。終わったら「終了」で満了"+cap);
 }
 function pressSpare(which){
   maybeReset(which);
@@ -440,12 +474,39 @@ function pressSpare(which){
   if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
   if(!st.firstTs) st.firstTs=now;
   const cap=cfg.spareCap;
-  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, spare:true, notified:false });
-  bumpDaily(which==="like"?"likes":"follows", now, +cap);
+  const c=half(cap);
+  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, counted:c, finished:false, spare:true, extra:false, notified:false });
+  bumpDaily(which==="like"?"likes":"follows", now, +c);
   askNotify(true);
   save(); render();
   if(calEnabled) registerStageAlarm(which, st.stages.length-1);
-  toast(cfg.emoji+" 予備をスタート！解除は "+hm(now+HOUR));
+  toast(cfg.emoji+" 予備をスタート（まず半分"+c+"）。解除は "+hm(now+HOUR));
+}
+function pressExtra(which){
+  maybeReset(which);
+  const st=state[which], now=Date.now();
+  if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
+  const pool=poolOf(which);
+  if(pool<=0){ toast("残り枠はありません"); return; }
+  if(!st.firstTs) st.firstTs=now;
+  const cap=pool, c=half(cap);
+  st.stages.push({ startTs:now, releaseTs:now+HOUR, cap, counted:c, finished:false, spare:false, extra:true, notified:false });
+  bumpDaily(which==="like"?"likes":"follows", now, +c);
+  askNotify(true);
+  save(); render();
+  if(calEnabled) registerStageAlarm(which, st.stages.length-1);
+  toast(CFG[which].emoji+" 残り"+cap+"を開始！解除は "+hm(now+HOUR));
+}
+function finishStage(which){
+  const st=state[which];
+  if(st.stages.length===0){ toast("開始していません"); return; }
+  const s=st.stages[st.stages.length-1];
+  if(s.finished){ toast("この回は終了済みです"); return; }
+  const add=s.cap-countedOf(s);
+  s.counted=s.cap; s.finished=true;
+  if(add>0) bumpDaily(which==="like"?"likes":"follows", s.startTs, +add);
+  save(); render();
+  toast("✅ 終了！満了 "+s.cap+" をカウントしました");
 }
 let cancelArm={like:0,follow:0};
 const CANCEL_WINDOW=2500;
@@ -456,7 +517,7 @@ function cancelLast(which){
   if(now-cancelArm[which] < CANCEL_WINDOW){
     cancelArm[which]=0;
     const s=st.stages.pop();
-    bumpDaily(which==="like"?"likes":"follows", s.startTs, -s.cap);
+    bumpDaily(which==="like"?"likes":"follows", s.startTs, -countedOf(s));
     if(st.stages.length===0) st.firstTs=null;
     save(); render();
     toast("直前の開始を取り消しました");
@@ -531,13 +592,15 @@ function downloadICS(title,whenMs,desc,fname){
   setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 function stdPosOf(which,i){
-  if(state[which].stages[i].spare) return 0;
-  let p=0; for(let k=0;k<=i;k++) if(!state[which].stages[k].spare) p++;
+  const stg=state[which].stages[i];
+  if(stg.spare||stg.extra) return 0;
+  let p=0; for(let k=0;k<=i;k++){ const x=state[which].stages[k]; if(!x.spare&&!x.extra) p++; }
   return p;
 }
 function releaseMsg(which,i){
   const cfg=CFG[which], st=state[which], s=st.stages[i];
   if(s.spare) return "予備の枠が終了しました🎉";
+  if(s.extra) return "残り枠が終了しました🎉";
   const pos=stdPosOf(which,i);
   if(pos>=cfg.counts.length) return "規定の枠が終了🎉 リセットは "+(st.firstTs?hm(st.firstTs+DAY):"-")+" ごろ";
   return "解除！"+(pos+1)+"回目（"+cfg.counts[pos]+"）を開始OK";
@@ -604,7 +667,8 @@ function watch(){
     st.stages.forEach((stg,i)=>{
       if(!stg.notified && now>=stg.releaseTs){
         stg.notified=true;
-        notify(cfg.emoji+" "+cfg.name, releaseMsg(w,i));
+        const note = stg.finished ? "" : "／「終了」未押し：今は半分カウント（終了で満了）";
+        notify(cfg.emoji+" "+cfg.name, releaseMsg(w,i)+note);
         save();
       }
     });
@@ -627,7 +691,7 @@ function summaryText(which){
   maybeReset(which);
   const st=state[which], now=Date.now();
   if(!st.firstTs) return "未開始";
-  const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which));
+  const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which) && poolOf(which)<=0);
   if(inWait(which)) return "解除 "+hm(st.stages[st.stages.length-1].releaseTs);
   if(finished) return "再開 "+hm(st.firstTs+DAY);
   return "開始OK";
@@ -638,12 +702,13 @@ function renderLimiter(which){
   const cfg=CFG[which], st=state[which], now=Date.now();
   const total=cfg.counts.length;
   const stdDone=standardDone(which), spUsed=spareUsed(which), waiting=inWait(which);
-  const startedCap=st.stages.reduce((a,s)=>a+s.cap,0);
+  const countedTotal=st.stages.reduce((a,s)=>a+countedOf(s),0);
   const dayMax=cfg.counts.reduce((a,b)=>a+b,0);
+  const pool=poolOf(which);
   document.getElementById(which+"Done").textContent=stdDone+(spUsed?"+予備":"");
-  document.getElementById(which+"Meter").style.width=Math.min(100,startedCap/dayMax*100)+"%";
+  document.getElementById(which+"Meter").style.width=Math.min(100,countedTotal/dayMax*100)+"%";
 
-  const finished = st.ended || (stdDone>=total && !waiting);
+  const finished = st.ended || (stdDone>=total && !waiting && pool<=0);
   const resetTs = st.firstTs ? st.firstTs+DAY : null;
 
   // 解除時刻バナー（目立つ表示）
@@ -665,15 +730,18 @@ function renderLimiter(which){
   st.stages.forEach((s,i)=>{
     const li=document.createElement("li"); li.className="stage-item";
     const released=now>=s.releaseTs;
-    const label = s.spare ? "予備" : (++stdSeen)+"回目";
+    const label = s.spare ? "予備" : s.extra ? "追加" : (++stdSeen)+"回目";
+    const cnt = s.finished
+      ? `<span class="cnt full">✅満了 ${countedOf(s)}</span>`
+      : `<span class="cnt halfc">半分 ${countedOf(s)}/${s.cap}</span>`;
     const tail = released
-      ? `<span class="tail done">✅ 解除済み</span>`
+      ? `<span class="tail done">解除済み</span>`
       : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
         `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅 追加</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
-      `<span class="time">開始 ${hm(s.startTs)} → 解除 ${hm(s.releaseTs)}</span>`+tail;
+      `<span class="time">開始 ${hm(s.startTs)} → 解除 ${hm(s.releaseTs)}<br>${cnt}</span>`+tail;
     list.appendChild(li);
   });
   for(let k=stdSeen;k<total;k++){
@@ -689,7 +757,24 @@ function renderLimiter(which){
     btn.disabled=true; btn.textContent=`🔁 次の開始まで ${countdown(resetTs-now)}`;
   }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
+  else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
   else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
+
+  // 終了ボタン（満了カウント）
+  const fb=document.getElementById(which+"FinishBtn");
+  const lastS=st.stages[st.stages.length-1];
+  if(lastS && !lastS.finished && !st.ended){
+    fb.style.display="block";
+    fb.textContent = waiting
+      ? `✅ 終了する（満了 ${lastS.cap} をカウント）`
+      : `✅ 終了にする（＋${lastS.cap-countedOf(lastS)} で満了）`;
+  }else fb.style.display="none";
+
+  // 残り枠の開始ボタン
+  const xb=document.getElementById(which+"ExtraBtn");
+  if(!waiting && !st.ended && pool>0 && st.firstTs){
+    xb.style.display="block"; xb.textContent=`▶ 残り ${pool} を開始`;
+  }else xb.style.display="none";
 
   // 予備ボタン・取消ボタン
   const sp=document.getElementById(which+"SpareBtn");
@@ -737,9 +822,16 @@ function renderLimiter(which){
   }else if(st.stages.length===0){
     badge.className="badge ok"; badge.textContent="準備OK";
     statusEl.className="status-line ok"; statusEl.textContent="開始ボタンを押すと記録スタート";
+  }else if(stdDone>=total){
+    badge.className="badge ok"; badge.textContent=pool>0?"残り枠あり":"予備OK";
+    statusEl.className="status-line ok";
+    statusEl.textContent = pool>0
+      ? `規定完了。終了を押さなかった分（残り ${pool}）を「▶ 残りを開始」で使えます`
+      : "規定完了！必要なら「予備」を開始できます";
   }else{
     badge.className="badge ok"; badge.textContent="解除済み";
-    statusEl.className="status-line ok"; statusEl.textContent=`解除済み！${stdDone+1}回目を開始できます`;
+    statusEl.className="status-line ok";
+    statusEl.textContent=`解除済み！${stdDone+1}回目を開始できます`+(pool>0?`（残り${pool}も開始可）`:``);
   }
 }
 
@@ -879,13 +971,47 @@ function addDraft(){
               .replace(/\s*\n\s*/g," ").trim();
   }
   if(!u && !t){ toast("URLか投稿文を入力してください"); return; }
-  state.drafts.unshift({url:u, text:t, done:false});
+  if(editingDraft>=0 && state.drafts[editingDraft]){
+    state.drafts[editingDraft].url=u;
+    state.drafts[editingDraft].text=t;
+    editingDraft=-1;
+    toast("投稿ネタを更新しました ✏️");
+  }else{
+    state.drafts.unshift({url:u, text:t, done:false});
+    toast("投稿ネタを保存しました ✅");
+  }
   document.getElementById("draftUrl").value="";
   document.getElementById("draftText").value="";
-  save(); render(); toast("投稿ネタを保存しました ✅");
+  save(); render();
 }
-function deleteDraft(i){ state.drafts.splice(i,1); save(); render(); toast("削除しました"); }
-function toggleDraftDone(i){ state.drafts[i].done=!state.drafts[i].done; save(); render(); }
+let editingDraft=-1;
+let showDoneDrafts=false;
+function editDraft(i){
+  const d=state.drafts[i]; if(!d) return;
+  document.getElementById("draftUrl").value=d.url||"";
+  document.getElementById("draftText").value=d.text||"";
+  editingDraft=i; render();
+  document.getElementById("draftUrl").scrollIntoView({behavior:"smooth",block:"center"});
+  toast("編集モード：直して「✏️ 更新する」を押してください");
+}
+function cancelEditDraft(){
+  editingDraft=-1;
+  document.getElementById("draftUrl").value="";
+  document.getElementById("draftText").value="";
+  render();
+}
+function toggleShowDone(){ showDoneDrafts=!showDoneDrafts; render(); }
+function deleteDraft(i){
+  state.drafts.splice(i,1);
+  if(editingDraft===i) editingDraft=-1;
+  else if(editingDraft>i) editingDraft--;
+  save(); render(); toast("削除しました");
+}
+function toggleDraftDone(i){
+  state.drafts[i].done=!state.drafts[i].done;
+  if(editingDraft===i) editingDraft=-1;
+  save(); render();
+}
 function copyDraftUrl(i){ copyText(normUrl(state.drafts[i].url)); }
 function copyDraftText(i){ copyText(state.drafts[i].text); }
 function copyText(s){
@@ -905,13 +1031,20 @@ function renderDrafts(){
   const list=document.getElementById("draftList");
   const drafts=state.drafts||[];
   const remain=drafts.filter(d=>!d.done).length;
-  document.getElementById("draftRemain").textContent=`未投稿 ${remain} 件 / 全 ${drafts.length} 件`;
+  const doneCount=drafts.length-remain;
+  document.getElementById("draftRemain").textContent=`未投稿 ${remain} 件`;
+  const addBtn=document.getElementById("draftAddBtn");
+  if(addBtn) addBtn.textContent = editingDraft>=0 ? "✏️ 更新する" : "＋ 保存する";
+  const cancelBtn=document.getElementById("draftEditCancel");
+  if(cancelBtn) cancelBtn.style.display = editingDraft>=0 ? "block":"none";
   list.innerHTML="";
   if(drafts.length===0){
     list.innerHTML='<li class="draft-empty">まだ投稿ネタがありません</li>'; return;
   }
   drafts.forEach((d,i)=>{
-    const li=document.createElement("li"); li.className="draft-item"+(d.done?" done":"");
+    if(d.done && !showDoneDrafts) return;   // 投稿済みは非表示
+    const li=document.createElement("li");
+    li.className="draft-item"+(d.done?" done":"")+(i===editingDraft?" editing":"");
     const urlRow = d.url
       ? `<div class="draft-row"><a href="${esc(normUrl(d.url))}" target="_blank" rel="noopener" class="draft-url">${esc(d.url)}</a>`+
         `<button class="dcopy" onclick="copyDraftUrl(${i})">コピー</button></div>` : "";
@@ -921,10 +1054,16 @@ function renderDrafts(){
     li.innerHTML=urlRow+textRow+
       `<div class="draft-actions">`+
         `<button class="dtoggle" onclick="toggleDraftDone(${i})">${d.done?"↩︎ 戻す":"✓ 投稿済み"}</button>`+
+        (d.done?``:`<button class="dedit" onclick="editDraft(${i})">✏️ 編集</button>`)+
         `<button class="ddel" onclick="deleteDraft(${i})">削除</button>`+
       `</div>`;
     list.appendChild(li);
   });
+  if(doneCount>0){
+    const li=document.createElement("li"); li.className="draft-empty";
+    li.innerHTML=`<button class="dshow" onclick="toggleShowDone()">${showDoneDrafts?"投稿済みを隠す":`投稿済み ${doneCount} 件を表示`}</button>`;
+    list.appendChild(li);
+  }
 }
 
 /* ---------- データ ---------- */
@@ -937,7 +1076,7 @@ function importData(ev){
   const f=ev.target.files[0]; if(!f) return;
   const rd=new FileReader();
   rd.onload=()=>{ try{ const s=JSON.parse(rd.result); if(!s.like||!s.daily) throw 0;
-    state=s; if(!state.drafts) state.drafts=[]; save(); render(); toast("インポートしました ✅"); }catch(e){ toast("⚠️ 読み込めませんでした"); } };
+    state=migrate(s); save(); render(); toast("インポートしました ✅"); }catch(e){ toast("⚠️ 読み込めませんでした"); } };
   rd.readAsText(f); ev.target.value="";
 }
 function resetAll(){
