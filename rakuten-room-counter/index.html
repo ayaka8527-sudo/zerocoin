@@ -242,7 +242,7 @@
   <!-- フォロー -->
   <div class="card follow" id="secFollow">
     <div class="card-head"><span class="emoji">👥</span><span class="title">フォロー</span><span class="badge" id="followBadge"></span></div>
-    <div class="progress-num"><b id="followDone">0</b> / 10 回　（100×10＝1000）</div>
+    <div class="progress-num"><b id="followDone">0</b> / 8 回　（100×8＝800）</div>
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
@@ -378,10 +378,10 @@
 const HOUR=3600000, DAY=86400000;
 const CFG = {
   like:   { counts:[300,300,200],                     spareCap:200, emoji:"❤️", name:"いいね", color:"--like" },
-  follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
+  follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-03b（開始時刻の修正🕐）";
+const APP_VERSION="2026-07-03c（フォロー上限800に修正）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
