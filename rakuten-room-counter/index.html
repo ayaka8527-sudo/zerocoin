@@ -381,7 +381,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-03a（終了ボタン式カウント・投稿ネタ編集）";
+const APP_VERSION="2026-07-03b（開始時刻の修正🕐）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -496,6 +496,25 @@ function pressExtra(which){
   save(); render();
   if(calEnabled) registerStageAlarm(which, st.stages.length-1);
   toast(CFG[which].emoji+" 残り"+cap+"を開始！解除は "+hm(now+HOUR));
+}
+function editStartTime(which,i){
+  const st=state[which]; const s=st.stages[i]; if(!s) return;
+  const cur=hm(s.startTs);
+  const inp=prompt("実際の開始時刻を入力してください（例 "+cur+"）", cur);
+  if(inp==null) return;
+  const m=inp.trim().match(/^(\d{1,2})[:：\s]?(\d{2})$/);
+  if(!m){ toast("時刻の形式が読めませんでした（例 14:05）"); return; }
+  const h=+m[1], mi=+m[2];
+  if(h>23||mi>59){ toast("時刻が正しくありません"); return; }
+  const base=new Date(s.startTs);
+  base.setHours(h,mi,0,0);
+  let ts=base.getTime();
+  if(ts>Date.now()) ts-=DAY;   // 未来の時刻なら前日の時刻とみなす
+  s.startTs=ts; s.releaseTs=ts+HOUR;
+  s.notified = Date.now()>=s.releaseTs;   // 解除がまだ先なら通知は改めて鳴る
+  st.firstTs=Math.min.apply(null, st.stages.map(x=>x.startTs));   // リセット起点も追従
+  save(); render();
+  toast("開始 "+hm(ts)+" → 解除 "+hm(ts+HOUR)+" に修正しました。カレンダーは📅で登録し直してください");
 }
 function finishStage(which){
   const st=state[which];
@@ -735,9 +754,11 @@ function renderLimiter(which){
       ? `<span class="cnt full">✅満了 ${countedOf(s)}</span>`
       : `<span class="cnt halfc">半分 ${countedOf(s)}/${s.cap}</span>`;
     const tail = released
-      ? `<span class="tail done">解除済み</span>`
+      ? `<span class="tail done">解除済み</span>`+
+        `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`
       : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
-        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅 追加</button>`;
+        `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+
+        `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
