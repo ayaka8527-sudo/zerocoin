@@ -186,6 +186,18 @@
   .cal-counts span{font-size:9.5px;font-weight:800}
   .c-like{color:var(--like)} .c-follow{color:var(--follow)} .c-post{color:var(--post)}
   .cal-month-total{text-align:center;font-size:12.5px;font-weight:700;margin-top:10px;color:var(--txt)}
+  /* フォロワー数 */
+  .fc-row{display:flex;gap:8px;margin-bottom:8px}
+  .fc-input{flex:1;border:2px solid var(--follow);border-radius:12px;padding:12px;font-size:22px;
+    font-weight:900;text-align:center;color:var(--txt);background:#fff;-moz-appearance:textfield}
+  .fc-input::-webkit-outer-spin-button,.fc-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .fc-save{border:none;border-radius:12px;background:var(--follow);color:#fff;font-weight:900;
+    padding:0 24px;font-size:15px;cursor:pointer}
+  .fc-save:active{transform:scale(.95)}
+  .cal-fc{text-align:center;font-size:9px;font-weight:800;color:#8e44ad;line-height:1.2;margin-top:1px}
+  .c-fc{color:#8e44ad}
+  .c-fcd{display:block;font-size:9.5px}
+  .c-fcd.up{color:var(--ok)} .c-fcd.down{color:var(--bad)}
   .notif-banner{background:#fffbe6;border:1.5px solid #ffe08a;border-radius:12px;padding:11px;font-size:12.5px;
     display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .notif-banner button{margin-left:auto;background:var(--rakuten);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
@@ -222,6 +234,16 @@
   <div class="notif-banner" id="notifBanner" style="display:none">
     🔔 解除のお知らせを受け取るには通知を許可してください
     <button onclick="askNotify()">許可する</button>
+  </div>
+
+  <!-- フォロワー数 -->
+  <div class="card">
+    <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー数</span><span class="badge warn" id="fcDelta">未入力</span></div>
+    <div class="fc-row">
+      <input type="number" id="fcInput" class="fc-input" inputmode="numeric" placeholder="例 1234">
+      <button class="fc-save" onclick="saveFollowerCount()">保存</button>
+    </div>
+    <div class="notice">毎日最初に入力すると、日別カレンダーに前日からの増加数（+◯）が並びます。同じ日に入れ直すと上書きされます。</div>
   </div>
 
   <!-- いいね -->
@@ -386,7 +408,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-04c（解除時刻＝24h後と最終回解除の遅い方）";
+const APP_VERSION="2026-07-04d（フォロワー数の毎日記録・前日比）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -394,6 +416,7 @@ function migrate(s){
     if(x.extra==null) x.extra=false;
   }); });
   if(!s.drafts) s.drafts=[];
+  if(!s.followers) s.followers={};
   return s;
 }
 let state = migrate(load());
@@ -414,7 +437,8 @@ function blankState(){
     posting:{ active:false, startTs:null, count:0 },
     rounds: [],
     daily:  {},
-    drafts: [],   // {url, text, done}
+    drafts: [],    // {url, text, done}
+    followers: {}, // dateKey -> フォロワー数
   };
 }
 function load(){
@@ -727,7 +751,7 @@ function render(){
   document.getElementById("date").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日(${wd})`;
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
-  renderPosting(); renderToday(); renderChart(); renderCumulative(); renderCalendar(); renderDrafts(); updateNotifBanner();
+  renderPosting(); renderToday(); renderChart(); renderCumulative(); renderCalendar(); renderDrafts(); renderFollowerCard(); updateNotifBanner();
   document.getElementById("sumLike").textContent=summaryText("like");
   document.getElementById("sumFollow").textContent=summaryText("follow");
   document.getElementById("appVer").textContent=APP_VERSION;
@@ -986,6 +1010,7 @@ function renderCalendar(){
   for(let i=0;i<startWd;i++){ const c=document.createElement("div"); c.className="cal-cell empty"; grid.appendChild(c); }
   const tk=todayKey();
   let ml=0,mf=0,mp=0;
+  const fkeys=[];
   for(let d=1; d<=days; d++){
     const key=dateKey(new Date(y,m,d).getTime());
     const e=state.daily[key];
@@ -999,11 +1024,65 @@ function renderCalendar(){
         (e.posts?`<span class="c-post">📝${e.posts}</span>`:``)+
       `</div>`;
     }
-    c.innerHTML=`<div class="cal-day">${d}</div>${counts}`;
+    let fc="";
+    const fv=state.followers[key];
+    if(fv!=null){
+      fkeys.push(key);
+      const fd=followerDelta(key);
+      fc=`<div class="cal-fc">👤${fv}`+
+         (fd!=null?`<span class="c-fcd ${fd>=0?"up":"down"}">${fd>=0?"+":""}${fd}</span>`:``)+
+         `</div>`;
+    }
+    c.innerHTML=`<div class="cal-day">${d}</div>${counts}${fc}`;
     grid.appendChild(c);
   }
+  let fcTotal="";
+  if(fkeys.length){
+    const firstV=state.followers[fkeys[0]];
+    const lastV=state.followers[fkeys[fkeys.length-1]];
+    const base=prevFollowerVal(fkeys[0]);
+    const net=lastV-(base!=null?base:firstV);
+    fcTotal=`　<span class="c-fc">👤${net>=0?"+":""}${net}</span>`;
+  }
   document.getElementById("calTotal").innerHTML=
-    `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`;
+    `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`+fcTotal;
+}
+
+/* ---------- フォロワー数の記録 ---------- */
+function prevFollowerVal(key){
+  const d=new Date(key+"T00:00:00");
+  for(let i=1;i<=90;i++){
+    d.setDate(d.getDate()-1);
+    const v=state.followers[dateKey(d.getTime())];
+    if(v!=null) return v;
+  }
+  return null;
+}
+function followerDelta(key){
+  const v=state.followers[key];
+  const p=prevFollowerVal(key);
+  return (v!=null && p!=null) ? v-p : null;
+}
+function saveFollowerCount(){
+  const v=parseInt(document.getElementById("fcInput").value,10);
+  if(isNaN(v)||v<0){ toast("フォロワー数を入力してください"); return; }
+  state.followers[todayKey()]=v;
+  save(); render();
+  const d=followerDelta(todayKey());
+  toast("👤 フォロワー数 "+v+" を記録"+(d!=null?"（前日比 "+(d>=0?"+":"")+d+"）":""));
+}
+function renderFollowerCard(){
+  const inp=document.getElementById("fcInput");
+  const v=state.followers[todayKey()];
+  if(document.activeElement!==inp) inp.value = v!=null ? v : "";
+  const badge=document.getElementById("fcDelta");
+  if(v!=null){
+    const d=followerDelta(todayKey());
+    badge.textContent = d!=null ? "前日比 "+(d>=0?"+":"")+d : "記録済み";
+    badge.className = "badge "+((d!=null&&d<0)?"bad":"ok");
+  }else{
+    badge.textContent="未入力"; badge.className="badge warn";
+  }
 }
 
 /* ---------- 今日の投稿ネタ（URL・投稿文） ---------- */
