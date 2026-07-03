@@ -241,7 +241,7 @@
   <div class="card">
     <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー数</span><span class="badge warn" id="fcDelta">未入力</span></div>
     <div class="fc-row">
-      <input type="number" id="fcInput" class="fc-input" inputmode="decimal" step="0.1" placeholder="例 17.3">
+      <input type="text" id="fcInput" class="fc-input" inputmode="decimal" placeholder="例 17.3">
       <span class="fc-unit">K</span>
       <button class="fc-save" onclick="saveFollowerCount()">保存</button>
     </div>
@@ -410,7 +410,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-04e（フォロワー数K表示・17.3形式入力）";
+const APP_VERSION="2026-07-04f（フォロワー入力の不具合修正）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1072,12 +1072,20 @@ function fmtK(n){
 function fmtKDelta(d){
   return (d<0?"-":"+")+fmtK(Math.abs(d));
 }
+function parseKInput(str){
+  str=(str||"").trim()
+    .replace(/[０-９]/g, c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))  // 全角数字→半角
+    .replace(/[．。，,]/g,".")                                             // 全角ピリオド等→.
+    .replace(/[kKｋＫ\s]/g,"");                                            // K表記や空白は除去
+  return parseFloat(str);
+}
 function saveFollowerCount(){
-  const raw=parseFloat(document.getElementById("fcInput").value);
+  const raw=parseKInput(document.getElementById("fcInput").value);
   if(isNaN(raw)||raw<0){ toast("フォロワー数を入力してください（例 17.3）"); return; }
   // 1000未満はK入力（17.3→17300）、1000以上はそのままの人数として扱う
   const v = raw<1000 ? Math.round(raw*1000) : Math.round(raw);
   state.followers[todayKey()]=v;
+  document.getElementById("fcInput").value=(Math.round(v/100)/10);
   save(); render();
   const d=followerDelta(todayKey());
   toast("👤 "+fmtK(v)+" を記録"+(d!=null?"（前日比 "+fmtKDelta(d)+"）":""));
@@ -1085,7 +1093,10 @@ function saveFollowerCount(){
 function renderFollowerCard(){
   const inp=document.getElementById("fcInput");
   const v=state.followers[todayKey()];
-  if(document.activeElement!==inp) inp.value = v!=null ? (Math.round(v/100)/10) : "";
+  // 入力途中の値を消さない：未保存のときは触らず、記録済みで空欄のときだけ埋める
+  if(document.activeElement!==inp && v!=null && inp.value===""){
+    inp.value=(Math.round(v/100)/10);
+  }
   const badge=document.getElementById("fcDelta");
   if(v!=null){
     const d=followerDelta(todayKey());
