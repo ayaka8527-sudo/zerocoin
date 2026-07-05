@@ -188,8 +188,9 @@
   .cal-month-total{text-align:center;font-size:12.5px;font-weight:700;margin-top:10px;color:var(--txt)}
   /* フォロワー数 */
   .fc-row{display:flex;gap:8px;margin-bottom:8px}
-  .fc-input{flex:1;border:2px solid var(--follow);border-radius:12px;padding:12px;font-size:22px;
-    font-weight:900;text-align:center;color:var(--txt);background:#fff;-moz-appearance:textfield}
+  .fc-input{flex:1;width:100%;min-width:0;border:2px solid var(--follow);border-radius:12px;padding:10px;
+    font-size:18px;font-weight:900;text-align:center;color:var(--txt);background:#fff;
+    box-sizing:border-box;-moz-appearance:textfield}
   .fc-input::-webkit-outer-spin-button,.fc-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   .fc-save{border:none;border-radius:12px;background:var(--follow);color:#fff;font-weight:900;
     padding:0 24px;font-size:15px;cursor:pointer}
@@ -197,10 +198,10 @@
   .fc-unit{align-self:center;font-size:18px;font-weight:900;color:var(--follow)}
   .fc-routine{background:#fffbe6;border:1.5px solid #ffe08a;border-radius:10px;padding:9px 11px;
     font-size:12.5px;font-weight:800;margin-bottom:10px;color:#8a6d00}
-  .fc-grid{display:flex;gap:10px;margin-bottom:10px}
-  .fc-field{flex:1}
-  .fc-label{display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:4px}
-  .fc-inline{display:flex;gap:6px;align-items:center}
+  .fc-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+  .fc-field{display:flex;align-items:center;gap:8px;min-width:0}
+  .fc-label{flex-shrink:0;width:88px;font-size:12.5px;font-weight:800;color:var(--muted)}
+  .fc-inline{flex:1;display:flex;gap:6px;align-items:center;min-width:0}
   .fc-save-big{width:100%;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:900;
     color:#fff;background:var(--follow);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)}
   .fc-save-big:active{transform:scale(.97)}
@@ -255,12 +256,12 @@
     <div class="fc-routine">📌 毎日ルーティン：0コレ → いいねを「待機中」にする</div>
     <div class="fc-grid">
       <div class="fc-field">
-        <span class="fc-label">フォロワー数</span>
-        <div class="fc-inline"><input type="text" id="fcInput" class="fc-input" inputmode="decimal" placeholder="17.3"><span class="fc-unit">K</span></div>
-      </div>
-      <div class="fc-field">
         <span class="fc-label">フォロー数</span>
         <div class="fc-inline"><input type="text" id="fgInput" class="fc-input" inputmode="decimal" placeholder="15.2"><span class="fc-unit">K</span></div>
+      </div>
+      <div class="fc-field">
+        <span class="fc-label">フォロワー数</span>
+        <div class="fc-inline"><input type="text" id="fcInput" class="fc-input" inputmode="decimal" placeholder="17.3"><span class="fc-unit">K</span></div>
       </div>
     </div>
     <button class="fc-save-big" onclick="saveFollowerCount()">💾 保存する</button>
@@ -442,7 +443,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-05a（期間合計・推移グラフ・フォロー数入力）";
+const APP_VERSION="2026-07-05b（入力欄の並び替え・幅修正）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
