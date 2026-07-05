@@ -195,6 +195,18 @@
     padding:0 24px;font-size:15px;cursor:pointer}
   .fc-save:active{transform:scale(.95)}
   .fc-unit{align-self:center;font-size:18px;font-weight:900;color:var(--follow)}
+  .fc-routine{background:#fffbe6;border:1.5px solid #ffe08a;border-radius:10px;padding:9px 11px;
+    font-size:12.5px;font-weight:800;margin-bottom:10px;color:#8a6d00}
+  .fc-grid{display:flex;gap:10px;margin-bottom:10px}
+  .fc-field{flex:1}
+  .fc-label{display:block;font-size:11.5px;font-weight:800;color:var(--muted);margin-bottom:4px}
+  .fc-inline{display:flex;gap:6px;align-items:center}
+  .fc-save-big{width:100%;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:900;
+    color:#fff;background:var(--follow);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+  .fc-save-big:active{transform:scale(.97)}
+  .tot-head{text-align:center;font-size:12px;font-weight:800;color:var(--muted);
+    margin:14px 0 4px;border-top:1px dashed #eadfe4;padding-top:10px}
+  #chart2{height:150px}
   .cal-fc{text-align:center;font-size:9px;font-weight:800;color:#8e44ad;line-height:1.2;margin-top:1px}
   .c-fc{color:#8e44ad}
   .c-fcd{display:block;font-size:9.5px}
@@ -237,15 +249,22 @@
     <button onclick="askNotify()">許可する</button>
   </div>
 
-  <!-- フォロワー数 -->
+  <!-- フォロワー・フォロー数 -->
   <div class="card">
-    <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー数</span><span class="badge warn" id="fcDelta">未入力</span></div>
-    <div class="fc-row">
-      <input type="text" id="fcInput" class="fc-input" inputmode="decimal" placeholder="例 17.3">
-      <span class="fc-unit">K</span>
-      <button class="fc-save" onclick="saveFollowerCount()">保存</button>
+    <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー・フォロー数</span><span class="badge warn" id="fcDelta">未入力</span></div>
+    <div class="fc-routine">📌 毎日ルーティン：0コレ → いいねを「待機中」にする</div>
+    <div class="fc-grid">
+      <div class="fc-field">
+        <span class="fc-label">フォロワー数</span>
+        <div class="fc-inline"><input type="text" id="fcInput" class="fc-input" inputmode="decimal" placeholder="17.3"><span class="fc-unit">K</span></div>
+      </div>
+      <div class="fc-field">
+        <span class="fc-label">フォロー数</span>
+        <div class="fc-inline"><input type="text" id="fgInput" class="fc-input" inputmode="decimal" placeholder="15.2"><span class="fc-unit">K</span></div>
+      </div>
     </div>
-    <div class="notice">千単位（K）で入力します。例：17.3 → 17.3K（17,300人）。毎日最初に入力すると、日別カレンダーに前日比（+0.2Kなど）が並びます。同じ日に入れ直すと上書きされます。</div>
+    <button class="fc-save-big" onclick="saveFollowerCount()">💾 保存する</button>
+    <div class="notice">千単位（K）で入力：17.3 → 17,300人。同じ日に入れ直すと上書き。推移はグラフカードで見られます。</div>
   </div>
 
   <!-- いいね -->
@@ -340,10 +359,23 @@
       <span><i style="background:var(--follow)"></i>フォロー</span>
       <span><i style="background:var(--post)"></i>投稿</span>
     </div>
-    <div class="totals" style="margin-top:12px">
-      <div><div class="t-num" style="color:var(--like)" id="cumLike">0</div><div class="t-lab">累計いいね</div></div>
-      <div><div class="t-num" style="color:var(--follow)" id="cumFollow">0</div><div class="t-lab">累計フォロー</div></div>
-      <div><div class="t-num" style="color:var(--post)" id="cumPost">0</div><div class="t-lab">累計投稿</div></div>
+    <div class="tot-head" id="rangeHead">直近7日間の合計</div>
+    <div class="totals">
+      <div><div class="t-num" style="color:var(--like)" id="rangeLike">0</div><div class="t-lab">いいね</div></div>
+      <div><div class="t-num" style="color:var(--follow)" id="rangeFollow">0</div><div class="t-lab">フォロー</div></div>
+      <div><div class="t-num" style="color:var(--post)" id="rangePost">0</div><div class="t-lab">投稿</div></div>
+    </div>
+    <div class="tot-head">記録開始からの累計</div>
+    <div class="totals">
+      <div><div class="t-num" style="color:var(--like)" id="cumLike">0</div><div class="t-lab">いいね</div></div>
+      <div><div class="t-num" style="color:var(--follow)" id="cumFollow">0</div><div class="t-lab">フォロー</div></div>
+      <div><div class="t-num" style="color:var(--post)" id="cumPost">0</div><div class="t-lab">投稿</div></div>
+    </div>
+    <div class="tot-head">👤 フォロワー / フォロー数の推移</div>
+    <canvas id="chart2"></canvas>
+    <div class="legend">
+      <span><i style="background:#8e44ad"></i>フォロワー数</span>
+      <span><i style="background:#4a9be8"></i>フォロー数</span>
     </div>
   </div>
 
@@ -410,7 +442,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-04f（フォロワー入力の不具合修正）";
+const APP_VERSION="2026-07-05a（期間合計・推移グラフ・フォロー数入力）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -419,6 +451,7 @@ function migrate(s){
   }); });
   if(!s.drafts) s.drafts=[];
   if(!s.followers) s.followers={};
+  if(!s.following) s.following={};
   return s;
 }
 let state = migrate(load());
@@ -441,6 +474,7 @@ function blankState(){
     daily:  {},
     drafts: [],    // {url, text, done}
     followers: {}, // dateKey -> フォロワー数
+    following: {}, // dateKey -> フォロー数（自分がフォローしている数）
   };
 }
 function load(){
@@ -753,7 +787,7 @@ function render(){
   document.getElementById("date").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日(${wd})`;
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
-  renderPosting(); renderToday(); renderChart(); renderCumulative(); renderCalendar(); renderDrafts(); renderFollowerCard(); updateNotifBanner();
+  renderPosting(); renderToday(); renderChart(); renderChart2(); renderCumulative(); renderCalendar(); renderDrafts(); renderFollowerCard(); updateNotifBanner();
   document.getElementById("sumLike").textContent=summaryText("like");
   document.getElementById("sumFollow").textContent=summaryText("follow");
   document.getElementById("appVer").textContent=APP_VERSION;
@@ -960,7 +994,7 @@ function setRange(n){
   chartRange=n;
   document.getElementById("wk7").className=n===7?"on":"";
   document.getElementById("wk30").className=n===30?"on":"";
-  renderChart();
+  renderChart(); renderChart2(); renderCumulative();
 }
 function renderChart(){
   const cv=document.getElementById("chart");
@@ -995,10 +1029,73 @@ function renderChart(){
 function roundRect(ctx,x,y,w,h,r){ if(h<=0)return;
   ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,0);ctx.arcTo(x,y+h,x,y,0);ctx.arcTo(x,y,x+w,y,r);ctx.closePath(); }
 function renderCumulative(){
+  // 記録開始からの累計
   let l=0,f=0,p=0; Object.values(state.daily).forEach(e=>{l+=e.likes;f+=e.follows;p+=e.posts;});
   document.getElementById("cumLike").textContent=l;
   document.getElementById("cumFollow").textContent=f;
   document.getElementById("cumPost").textContent=p;
+  // 選択中の期間（7日/30日）の合計
+  let rl=0,rf=0,rp=0;
+  const base=new Date();
+  for(let i=0;i<chartRange;i++){
+    const d=new Date(base); d.setDate(d.getDate()-i);
+    const e=state.daily[dateKey(d.getTime())];
+    if(e){ rl+=e.likes; rf+=e.follows; rp+=e.posts; }
+  }
+  document.getElementById("rangeHead").textContent=`直近${chartRange}日間の合計`;
+  document.getElementById("rangeLike").textContent=rl;
+  document.getElementById("rangeFollow").textContent=rf;
+  document.getElementById("rangePost").textContent=rp;
+}
+
+/* ---------- フォロワー/フォロー数の推移（ライングラフ） ---------- */
+function renderChart2(){
+  const cv=document.getElementById("chart2");
+  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=150;
+  if(!W) return;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const fPts=[], gPts=[];
+  const base=new Date();
+  let firstD=null, lastD=null;
+  for(let i=chartRange-1;i>=0;i--){
+    const d=new Date(base); d.setDate(d.getDate()-i);
+    const k=dateKey(d.getTime());
+    const x=chartRange-1-i;
+    if(x===0) firstD=d; if(i===0) lastD=new Date(d);
+    if(state.followers[k]!=null) fPts.push({x, y:state.followers[k]});
+    if(state.following[k]!=null) gPts.push({x, y:state.following[k]});
+  }
+  const all=fPts.concat(gPts);
+  if(all.length===0){
+    ctx.fillStyle="#bbb"; ctx.font="12px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("フォロワー数を入力するとここに推移が出ます", W/2, H/2);
+    return;
+  }
+  let min=Math.min.apply(null, all.map(p=>p.y));
+  let max=Math.max.apply(null, all.map(p=>p.y));
+  if(min===max){ min-=100; max+=100; }
+  const padB=20,padT=10,padL=40,padR=10;
+  const chartH=H-padB-padT, chartW=W-padL-padR;
+  const X=x=> padL + (chartRange<=1 ? chartW/2 : chartW*x/(chartRange-1));
+  const Y=y=> padT + chartH*(1-(y-min)/(max-min));
+  ctx.strokeStyle="#eee"; ctx.beginPath();
+  ctx.moveTo(padL,H-padB); ctx.lineTo(W-padR,H-padB); ctx.stroke();
+  ctx.fillStyle="#bbb"; ctx.font="9px sans-serif"; ctx.textAlign="left";
+  ctx.fillText(fmtK(max), 2, padT+8);
+  ctx.fillText(fmtK(min), 2, H-padB);
+  ctx.textAlign="center";
+  if(firstD) ctx.fillText((firstD.getMonth()+1)+"/"+firstD.getDate(), padL, H-6);
+  if(lastD)  ctx.fillText((lastD.getMonth()+1)+"/"+lastD.getDate(), W-padR-10, H-6);
+  function line(pts,color){
+    if(!pts.length) return;
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
+    pts.forEach((p,i)=>{ i?ctx.lineTo(X(p.x),Y(p.y)):ctx.moveTo(X(p.x),Y(p.y)); });
+    ctx.stroke();
+    pts.forEach(p=>{ ctx.fillStyle=color; ctx.beginPath(); ctx.arc(X(p.x),Y(p.y),2.5,0,7); ctx.fill(); });
+  }
+  line(fPts,"#8e44ad");
+  line(gPts,"#4a9be8");
 }
 
 /* ---------- 日別カレンダー ---------- */
@@ -1079,27 +1176,43 @@ function parseKInput(str){
     .replace(/[kKｋＫ\s]/g,"");                                            // K表記や空白は除去
   return parseFloat(str);
 }
+function toRawCount(raw){ return raw<1000 ? Math.round(raw*1000) : Math.round(raw); }  // 1000未満はK入力
 function saveFollowerCount(){
-  const raw=parseKInput(document.getElementById("fcInput").value);
-  if(isNaN(raw)||raw<0){ toast("フォロワー数を入力してください（例 17.3）"); return; }
-  // 1000未満はK入力（17.3→17300）、1000以上はそのままの人数として扱う
-  const v = raw<1000 ? Math.round(raw*1000) : Math.round(raw);
-  state.followers[todayKey()]=v;
-  document.getElementById("fcInput").value=(Math.round(v/100)/10);
+  const fRaw=parseKInput(document.getElementById("fcInput").value);
+  const gRaw=parseKInput(document.getElementById("fgInput").value);
+  const fOk=!isNaN(fRaw)&&fRaw>=0, gOk=!isNaN(gRaw)&&gRaw>=0;
+  if(!fOk && !gOk){ toast("フォロワー数かフォロー数を入力してください（例 17.3）"); return; }
+  const k=todayKey();
+  let msg=[];
+  if(fOk){
+    const v=toRawCount(fRaw);
+    state.followers[k]=v;
+    document.getElementById("fcInput").value=(Math.round(v/100)/10);
+    const d=followerDelta(k);
+    msg.push("フォロワー "+fmtK(v)+(d!=null?"（"+fmtKDelta(d)+"）":""));
+  }
+  if(gOk){
+    const v=toRawCount(gRaw);
+    state.following[k]=v;
+    document.getElementById("fgInput").value=(Math.round(v/100)/10);
+    msg.push("フォロー "+fmtK(v));
+  }
   save(); render();
-  const d=followerDelta(todayKey());
-  toast("👤 "+fmtK(v)+" を記録"+(d!=null?"（前日比 "+fmtKDelta(d)+"）":""));
+  toast("👤 記録：" + msg.join(" ／ "));
 }
 function renderFollowerCard(){
-  const inp=document.getElementById("fcInput");
-  const v=state.followers[todayKey()];
-  // 入力途中の値を消さない：未保存のときは触らず、記録済みで空欄のときだけ埋める
-  if(document.activeElement!==inp && v!=null && inp.value===""){
-    inp.value=(Math.round(v/100)/10);
-  }
+  const k=todayKey();
+  // 入力途中の値を消さない：記録済みで空欄のときだけ埋める
+  const fill=(id,v)=>{
+    const inp=document.getElementById(id);
+    if(document.activeElement!==inp && v!=null && inp.value==="") inp.value=(Math.round(v/100)/10);
+  };
+  fill("fcInput", state.followers[k]);
+  fill("fgInput", state.following[k]);
+  const v=state.followers[k];
   const badge=document.getElementById("fcDelta");
   if(v!=null){
-    const d=followerDelta(todayKey());
+    const d=followerDelta(k);
     badge.textContent = d!=null ? "前日比 "+fmtKDelta(d) : fmtK(v)+" 記録済み";
     badge.className = "badge "+((d!=null&&d<0)?"bad":"ok");
   }else{
@@ -1244,7 +1357,7 @@ function toast(msg){
 }
 
 /* ---------- 起動 ---------- */
-window.addEventListener("resize", renderChart);
+window.addEventListener("resize", ()=>{ renderChart(); renderChart2(); });
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ watch(); render(); } });
 window.addEventListener("focus", ()=>{ watch(); render(); });
 document.getElementById("calToggle").checked = calEnabled;
