@@ -100,6 +100,11 @@
   .chip .del { color: var(--red); font-weight: 700; }
   .ocr-candidates { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   .ocr-candidates button { background: #fff; border: 1px solid var(--indigo); color: var(--indigo); padding: 4px 10px; font-size: 0.85rem; border-radius: 8px; }
+  .ocr-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-top: 12px; }
+  .ocr-item.done { opacity: 0.55; }
+  .ocr-item-head { display: flex; gap: 10px; align-items: flex-start; }
+  .ocr-item-head img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .ocr-item-body { flex: 1; min-width: 0; }
   .preview-img { max-width: 100%; max-height: 220px; border-radius: 10px; margin-top: 8px; display: block; }
   .muted { color: var(--muted); font-size: 0.8rem; }
   table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
@@ -135,20 +140,12 @@
   </section>
 
   <section class="card">
-    <h2>記録する</h2>
+    <h2>手入力で記録</h2>
 
     <label class="field-label">人</label>
     <div class="row">
       <select id="entryPerson"></select>
     </div>
-
-    <label class="field-label">スクリーンショットから読み取り（任意）</label>
-    <div class="row">
-      <input type="file" id="ocrFile" accept="image/*">
-    </div>
-    <img id="ocrPreview" class="preview-img" style="display:none">
-    <div id="ocrStatus" class="muted"></div>
-    <div id="ocrCandidates" class="ocr-candidates"></div>
 
     <div class="row" style="margin-top:10px">
       <div style="flex:1">
@@ -167,6 +164,15 @@
     </div>
 
     <button class="big" id="saveEntryBtn">記録する</button>
+  </section>
+
+  <section class="card">
+    <h2>スクリーンショットから記録（複数選択可）</h2>
+    <p class="muted">複数枚選ぶと1枚ずつ自動で数値を読み取ります。読み取り後、人と数値を確認してから1件ずつ記録してください。</p>
+    <div class="row" style="margin-top:10px">
+      <input type="file" id="ocrFiles" accept="image/*" multiple>
+    </div>
+    <div id="ocrBatchList"></div>
   </section>
 
   <section class="card">
@@ -353,73 +359,176 @@
   }
   setNowDatetime();
 
-  // ---------- OCR ----------
-  var ocrFile = document.getElementById("ocrFile");
-  var ocrPreview = document.getElementById("ocrPreview");
-  var ocrStatus = document.getElementById("ocrStatus");
-  var ocrCandidates = document.getElementById("ocrCandidates");
+  // ---------- OCR (batch, multiple screenshots) ----------
   var followInput = document.getElementById("followInput");
   var followerInput = document.getElementById("followerInput");
+  var ocrFilesInput = document.getElementById("ocrFiles");
+  var ocrBatchList = document.getElementById("ocrBatchList");
+  var ocrWorkerPromise = null;
 
-  ocrFile.addEventListener("change", function(){
-    var file = ocrFile.files[0];
-    if(!file) return;
-    var url = URL.createObjectURL(file);
-    ocrPreview.src = url;
-    ocrPreview.style.display = "block";
-    ocrCandidates.innerHTML = "";
+  function getOcrWorker(){
+    if(!ocrWorkerPromise){
+      ocrWorkerPromise = Tesseract.createWorker("eng").then(function(worker){
+        return worker.setParameters({ tessedit_char_whitelist: "0123456789,.KkWw" }).then(function(){
+          return worker;
+        });
+      });
+    }
+    return ocrWorkerPromise;
+  }
+
+  // Downscaling before OCR cuts recognition time substantially on full-resolution
+  // phone screenshots without hurting digit legibility.
+  function downscaleImage(file, maxDim){
+    if(typeof createImageBitmap !== "function") return Promise.resolve(file);
+    return createImageBitmap(file).then(function(bitmap){
+      var scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+      var w = Math.max(1, Math.round(bitmap.width * scale));
+      var h = Math.max(1, Math.round(bitmap.height * scale));
+      var canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
+      return canvas;
+    }).catch(function(){ return file; });
+  }
+
+  function extractCandidates(text){
+    var matches = text.match(/\d[\d,]*\.?\d*\s*[KkWw]?/g) || [];
+    var seen = {};
+    var candidates = [];
+    matches.forEach(function(raw){
+      var val = parseCount(raw);
+      if(val == null || val <= 0) return;
+      if(seen[val]) return;
+      seen[val] = true;
+      candidates.push(val);
+    });
+    candidates.sort(function(a,b){ return b - a; });
+    return candidates.slice(0, 8);
+  }
+
+  function buildOcrCard(file){
+    var card = document.createElement("div");
+    card.className = "ocr-item";
+    card.innerHTML =
+      '<div class="ocr-item-head">' +
+        '<img src="' + URL.createObjectURL(file) + '" alt="">' +
+        '<div class="ocr-item-body">' +
+          '<div class="ocr-status muted"><span class="spinner"></span> 読み取り待ち...</div>' +
+          '<div class="ocr-candidates"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="row" style="margin-top:10px">' +
+        '<select class="item-person"></select>' +
+      '</div>' +
+      '<div class="row">' +
+        '<div style="flex:1">' +
+          '<label class="field-label">フォロー数</label>' +
+          '<input type="text" inputmode="numeric" class="item-follow" placeholder="例: 1234">' +
+        '</div>' +
+        '<div style="flex:1">' +
+          '<label class="field-label">フォロワー数</label>' +
+          '<input type="text" inputmode="numeric" class="item-follower" placeholder="例: 5678">' +
+        '</div>' +
+      '</div>' +
+      '<div class="row"><input type="datetime-local" class="item-datetime"></div>' +
+      '<button class="item-save">記録する</button>';
+
+    var personSelect = card.querySelector(".item-person");
+    state.people.forEach(function(p){
+      var opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name;
+      personSelect.appendChild(opt);
+    });
+    if(entryPerson.value) personSelect.value = entryPerson.value;
+
+    var dtInput = card.querySelector(".item-datetime");
+    var d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    dtInput.value = d.toISOString().slice(0, 16);
+
+    var itemFollow = card.querySelector(".item-follow");
+    var itemFollower = card.querySelector(".item-follower");
+    var saveBtn = card.querySelector(".item-save");
+
+    saveBtn.addEventListener("click", function(){
+      var personId = personSelect.value;
+      if(!personId){ alert("先に「対象の人」を追加してください。"); return; }
+      var follow = parseCount(itemFollow.value);
+      var follower = parseCount(itemFollower.value);
+      if(follow == null && follower == null){ alert("フォロー数かフォロワー数を入力してください。"); return; }
+      var ts = dtInput.value ? new Date(dtInput.value).getTime() : Date.now();
+      addEntry(personId, ts, follow, follower);
+      card.classList.add("done");
+      saveBtn.textContent = "記録済み";
+      saveBtn.disabled = true;
+      maybeAutoSync();
+    });
+
+    return card;
+  }
+
+  function runOcrOnCard(card, file){
+    var statusEl = card.querySelector(".ocr-status");
+    var candidatesEl = card.querySelector(".ocr-candidates");
+    var itemFollow = card.querySelector(".item-follow");
+    var itemFollower = card.querySelector(".item-follower");
 
     if(typeof Tesseract === "undefined"){
-      ocrStatus.textContent = "読み取り機能を読み込めませんでした（通信環境をご確認のうえ、手入力してください）。";
-      return;
+      statusEl.textContent = "読み取り機能を読み込めませんでした。手入力してください。";
+      return Promise.resolve();
     }
-    ocrStatus.innerHTML = '<span class="spinner"></span> 画像を読み取り中...';
+    statusEl.innerHTML = '<span class="spinner"></span> 読み取り中...';
 
-    Tesseract.recognize(file, "eng", {})
+    return downscaleImage(file, 1200)
+      .then(function(image){ return getOcrWorker().then(function(w){ return w.recognize(image); }); })
       .then(function(result){
-        var text = result.data.text || "";
-        var matches = text.match(/\d[\d,]*\.?\d*\s*[KkWw万]?/g) || [];
-        var seen = {};
-        var candidates = [];
-        matches.forEach(function(raw){
-          var val = parseCount(raw);
-          if(val == null || val <= 0) return;
-          if(seen[val]) return;
-          seen[val] = true;
-          candidates.push(val);
-        });
-        candidates.sort(function(a,b){ return b - a; });
-        candidates = candidates.slice(0, 8);
-
+        var candidates = extractCandidates(result.data.text || "");
         if(candidates.length === 0){
-          ocrStatus.textContent = "数値を検出できませんでした。手入力してください。";
+          statusEl.textContent = "数値を検出できませんでした。手入力してください。";
           return;
         }
-        ocrStatus.textContent = "検出された数値をタップして下の欄に入力してください。";
+        statusEl.textContent = "検出された数値（自動で下に入力済み。タップで変更できます）";
         candidates.forEach(function(val){
           var btn = document.createElement("button");
           btn.type = "button";
           btn.textContent = fmtCount(val);
           btn.addEventListener("click", function(){
-            if(document.activeElement === followerInput){
-              followerInput.value = val;
-            } else if(document.activeElement === followInput){
-              followInput.value = val;
-            } else if(!followerInput.value){
-              followerInput.value = val;
-            } else if(!followInput.value){
-              followInput.value = val;
-            } else {
-              followerInput.value = val;
-            }
+            if(!itemFollower.value) itemFollower.value = val;
+            else if(!itemFollow.value) itemFollow.value = val;
+            else itemFollower.value = val;
           });
-          ocrCandidates.appendChild(btn);
+          candidatesEl.appendChild(btn);
         });
+        if(candidates[0] != null) itemFollower.value = candidates[0];
+        if(candidates[1] != null) itemFollow.value = candidates[1];
       })
       .catch(function(err){
         console.error(err);
-        ocrStatus.textContent = "読み取りに失敗しました。手入力してください。";
+        statusEl.textContent = "読み取りに失敗しました。手入力してください。";
       });
+  }
+
+  ocrFilesInput.addEventListener("change", function(){
+    var files = Array.prototype.slice.call(ocrFilesInput.files || []);
+    if(files.length === 0) return;
+
+    var items = files.map(function(file){
+      var card = buildOcrCard(file);
+      ocrBatchList.appendChild(card);
+      return { card: card, file: file };
+    });
+
+    // Processed one at a time: Tesseract runs on a single worker, and this also
+    // keeps memory bounded when many screenshots are selected at once.
+    var chain = Promise.resolve();
+    items.forEach(function(item){
+      chain = chain.then(function(){ return runOcrOnCard(item.card, item.file); });
+    });
+
+    ocrFilesInput.value = "";
   });
 
   // ---------- entries ----------
@@ -464,10 +573,6 @@
 
     followInput.value = "";
     followerInput.value = "";
-    ocrFile.value = "";
-    ocrPreview.style.display = "none";
-    ocrCandidates.innerHTML = "";
-    ocrStatus.textContent = "";
     setNowDatetime();
 
     maybeAutoSync();
