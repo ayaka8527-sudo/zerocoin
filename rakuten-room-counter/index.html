@@ -470,7 +470,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23（今日の解除時刻入力・計上日を終了日に）";
+const APP_VERSION="2026-07-23b（解除時刻入力・計上日を終了日に・推移グラフに数値表示）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1182,15 +1182,31 @@ function renderChart2(){
   ctx.textAlign="center";
   if(firstD) ctx.fillText((firstD.getMonth()+1)+"/"+firstD.getDate(), padL, H-6);
   if(lastD)  ctx.fillText((lastD.getMonth()+1)+"/"+lastD.getDate(), W-padR-10, H-6);
-  function line(pts,color){
+  function line(pts,color,above){
     if(!pts.length) return;
     ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
     pts.forEach((p,i)=>{ i?ctx.lineTo(X(p.x),Y(p.y)):ctx.moveTo(X(p.x),Y(p.y)); });
     ctx.stroke();
-    pts.forEach(p=>{ ctx.fillStyle=color; ctx.beginPath(); ctx.arc(X(p.x),Y(p.y),2.5,0,7); ctx.fill(); });
+    // 点＋実数値ラベル（混み合う時は間引き。最新点は必ず表示）
+    ctx.font="9px sans-serif"; ctx.textAlign="center"; ctx.lineJoin="round";
+    let lastLabelX=-999;
+    pts.forEach((p,i)=>{
+      const px=X(p.x), py=Y(p.y);
+      ctx.fillStyle=color; ctx.beginPath(); ctx.arc(px,py,2.5,0,7); ctx.fill();
+      const isLast=i===pts.length-1;
+      if(isLast || px-lastLabelX>=32){
+        lastLabelX=px;
+        const tx=Math.max(16, Math.min(W-16, px));
+        let ty=above ? py-6 : py+11;
+        ty=Math.max(padT+7, Math.min(H-padB-1, ty));
+        const label=fmtK(p.y);
+        ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeText(label,tx,ty);   // 白フチで見やすく
+        ctx.fillStyle=color; ctx.fillText(label,tx,ty);
+      }
+    });
   }
-  line(fPts,"#8e44ad");
-  line(gPts,"#4a9be8");
+  line(fPts,"#8e44ad",true);    // フォロワーは点の上
+  line(gPts,"#4a9be8",false);   // フォローは点の下
 }
 
 /* ---------- 日別カレンダー ---------- */
