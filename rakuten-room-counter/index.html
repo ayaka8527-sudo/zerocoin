@@ -56,6 +56,7 @@
     cursor:pointer;transition:transform .08s,opacity .2s;box-shadow:0 4px 12px rgba(0,0,0,.15)}
   .start-btn:active{transform:scale(.97)}
   .start-btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .start-btn.compact{width:auto;max-width:200px;margin:0 auto;display:block;padding:10px 14px;font-size:13px}
   .like .start-btn{background:var(--like)}
   .follow .start-btn{background:var(--follow)}
   .release-banner{border-radius:14px;padding:12px;margin:0 0 12px;text-align:center;line-height:1.3}
@@ -83,8 +84,8 @@
   .rel-input-info.wait{background:#fff3e6;color:var(--warn)}
   .rel-input-info.done{background:#fdecea;color:var(--bad)}
   .rel-big{border-radius:14px;padding:14px;margin:0 0 10px;text-align:center;line-height:1.25}
-  .rel-big.wait{background:#fff3e6;color:var(--warn)}
-  .rel-big.done{background:#fdecea;color:var(--bad)}
+  .rel-big.wait{background:#f3ecfa;color:#8e44ad}
+  .rel-big.done{background:#eafaf0;color:var(--ok)}
   .rel-big .lbl{font-size:13px;font-weight:800;opacity:.85}
   .rel-big .big{font-size:46px;font-weight:900;font-variant-numeric:tabular-nums;margin:2px 0}
   .rel-big .sub{font-size:12.5px;opacity:.9}
@@ -384,7 +385,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23i（今日の解除時間を次の解除より上に表示・カレンダー通知リトライ）";
+const APP_VERSION="2026-07-23j（解除時間の色を区別・待機中ボタンを小さく）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -889,6 +890,7 @@ function renderLimiter(which){
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
   else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
   else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
+  btn.classList.toggle("compact", btn.disabled);
 
   // 終了ボタン（満了/半分）※本日終了の後でも押せる
   const fb=document.getElementById(which+"FinishBtn");
