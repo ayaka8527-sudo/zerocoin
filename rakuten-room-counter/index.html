@@ -74,6 +74,12 @@
   .rel-save{flex-shrink:0;border:none;border-radius:9px;background:var(--rakuten);color:#fff;
     font-size:12.5px;font-weight:800;padding:9px 12px;cursor:pointer}
   .rel-save:active{transform:scale(.95)}
+  .rel-mark{flex:1;min-width:0;border:none;border-radius:10px;background:var(--rakuten);color:#fff;
+    font-size:13.5px;font-weight:800;padding:11px 8px;cursor:pointer;white-space:nowrap}
+  .rel-mark:active{transform:scale(.96)}
+  .rel-clear{flex-shrink:0;border:1.5px solid #e0b3bd;background:#fff;color:var(--bad);
+    border-radius:8px;padding:8px 11px;font-size:13px;font-weight:800;cursor:pointer}
+  .rel-clear:active{transform:scale(.95)}
   .rel-input-info{font-size:12.5px;font-weight:800;text-align:center;border-radius:10px;padding:7px;margin:0 0 10px}
   .rel-input-info.wait{background:#fff3e6;color:var(--warn)}
   .rel-input-info.done{background:#fdecea;color:var(--bad)}
@@ -288,10 +294,9 @@
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <div class="rel-input">
-      <span class="rel-input-lbl">⏰ 今日の解除</span>
-      <input type="text" id="likeRelInput" class="rel-time-input" inputmode="numeric" placeholder="14:30">
-      <button class="rel-save" onclick="saveManualRel('like')">保存</button>
+      <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">🔒 上限になった（今記録）</button>
       <button class="mini-cal" onclick="calManualRel('like')">📅</button>
+      <button class="rel-clear" id="likeRelClear" onclick="clearManualRel('like')" style="display:none">✕</button>
     </div>
     <div class="rel-input-info" id="likeRelInfo" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
@@ -314,10 +319,9 @@
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <div class="rel-input">
-      <span class="rel-input-lbl">⏰ 今日の解除</span>
-      <input type="text" id="followRelInput" class="rel-time-input" inputmode="numeric" placeholder="14:30">
-      <button class="rel-save" onclick="saveManualRel('follow')">保存</button>
+      <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">🔒 上限になった（今記録）</button>
       <button class="mini-cal" onclick="calManualRel('follow')">📅</button>
+      <button class="rel-clear" id="followRelClear" onclick="clearManualRel('follow')" style="display:none">✕</button>
     </div>
     <div class="rel-input-info" id="followRelInfo" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
@@ -470,7 +474,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23b（解除時刻入力・計上日を終了日に・推移グラフに数値表示）";
+const APP_VERSION="2026-07-23c（上限記録ボタン→24時間後に解除通知・計上日を終了日に・推移グラフに数値表示）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -480,6 +484,7 @@ function migrate(s){
     if(x.dayKey==null){ x.dayKey=dateKey(x.startTs); x.applied=(x.counted!=null?x.counted:x.cap); }
   }); });
   if(!s.manualRel) s.manualRel={like:null, follow:null};
+  else ["like","follow"].forEach(w=>{ if(s.manualRel[w] && s.manualRel[w].relTs==null) s.manualRel[w]=null; });  // 旧形式(key/hm)は破棄
   if(!s.drafts) s.drafts=[];
   if(!s.followers) s.followers={};
   if(!s.following) s.following={};
@@ -690,53 +695,50 @@ function recordStage(which,s,newKey,amount){
   s.dayKey=newKey; s.applied=amount;
 }
 
-/* ---------- 今日の解除時刻（手入力） ---------- */
-function parseHM(str){
-  const m=(str||"").trim()
-    .replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
-    .match(/^(\d{1,2})[:：\s]?(\d{2})$/);
-  if(!m) return null;
-  const h=+m[1], mi=+m[2];
-  if(h>23||mi>59) return null;
-  return {h,mi,hm:String(h).padStart(2,"0")+":"+String(mi).padStart(2,"0")};
-}
+/* ---------- 解除時刻（上限になった時刻＋24時間で通知） ---------- */
 function manualRelTs(which){
   const r=state.manualRel && state.manualRel[which];
-  if(!r || r.key!==todayKey()) return null;
-  const p=parseHM(r.hm); if(!p) return null;
-  const d=new Date(); d.setHours(p.h,p.mi,0,0);
-  return d.getTime();
+  return (r && r.relTs) ? r.relTs : null;
 }
-function saveManualRel(which){
+// 同じ日ならHH:MMだけ、別日なら「M/D HH:MM」
+function relDayHm(ts){
+  const d=new Date(ts), td=new Date();
+  const sameDay = d.getFullYear()===td.getFullYear() && d.getMonth()===td.getMonth() && d.getDate()===td.getDate();
+  return (sameDay?"":(d.getMonth()+1)+"/"+d.getDate()+" ")+hm(ts);
+}
+function markLimit(which){
   if(!state.manualRel) state.manualRel={like:null,follow:null};
-  const raw=(document.getElementById(which+"RelInput").value||"").trim();
-  if(raw===""){ state.manualRel[which]=null; save(); render(); toast("今日の解除時刻をクリアしました"); return; }
-  const p=parseHM(raw);
-  if(!p){ toast("時刻の形式が読めませんでした（例 14:30）"); return; }
-  state.manualRel[which]={key:todayKey(), hm:p.hm};
-  document.getElementById(which+"RelInput").value=p.hm;   // 14:30 形式に整形
+  const relTs=Date.now()+DAY;   // 24時間後＝翌日の同じ時間
+  state.manualRel[which]={relTs, notified:false};
+  askNotify(true);
   save(); render();
-  toast(CFG[which].emoji+" 今日の解除時刻を "+p.hm+" に設定");
+  if(calEnabled) calManualRel(which);
+  toast(CFG[which].emoji+" 記録！解除は翌日 "+hm(relTs)+"（24時間後）に通知します");
+}
+function clearManualRel(which){
+  if(!state.manualRel) return;
+  state.manualRel[which]=null; save(); render();
+  toast("解除の記録をクリアしました");
 }
 function calManualRel(which){
   const ts=manualRelTs(which);
-  if(ts==null){ toast("先に今日の解除時刻を入力して保存してください"); return; }
-  downloadICS(`${CFG[which].emoji} ${CFG[which].name} 解除`, ts, "楽天ROOM 活動カウンター", "解除アラーム");
+  if(ts==null){ toast("先に「上限になった（今記録）」を押してください"); return; }
+  downloadICS(`${CFG[which].emoji} ${CFG[which].name} 解除！また活動できます`, ts, "楽天ROOM 活動カウンター", "解除アラーム");
   toast("📅 解除時刻をカレンダーに登録");
 }
 function renderManualRel(which){
-  const inp=document.getElementById(which+"RelInput");
   const info=document.getElementById(which+"RelInfo");
-  const r=state.manualRel && state.manualRel[which];
-  const set = r && r.key===todayKey();
-  if(inp && document.activeElement!==inp && inp.value==="") inp.value = set ? r.hm : "";
+  const clr=document.getElementById(which+"RelClear");
+  const ts=manualRelTs(which);
+  if(clr) clr.style.display = ts!=null ? "inline-block":"none";
   if(!info) return;
-  const ts=set?manualRelTs(which):null;
   if(ts==null){ info.style.display="none"; info.textContent=""; return; }
   const now=Date.now();
   info.style.display="block";
   info.className="rel-input-info "+(now>=ts?"done":"wait");
-  info.textContent = now>=ts ? `解除済み（${r.hm}）` : `⏰ ${r.hm} に解除（あと${countdown(ts-now)}）`;
+  info.textContent = now>=ts
+    ? `✅ 解除済み（${relDayHm(ts)}）また活動できます`
+    : `⏰ ${relDayHm(ts)} に解除（あと${countdown(ts-now)}）`;
 }
 
 /* ---------- 投稿 ---------- */
@@ -869,6 +871,13 @@ function watch(){
         save();
       }
     });
+    // 手動記録（上限になった＋24時間）の解除通知
+    const mr=state.manualRel && state.manualRel[w];
+    if(mr && mr.relTs && !mr.notified && now>=mr.relTs){
+      mr.notified=true;
+      notify(cfg.emoji+" "+cfg.name, "解除されました！また活動できます🎉（24時間経過）");
+      save();
+    }
   });
 }
 
@@ -889,8 +898,8 @@ function summaryText(which){
   maybeReset(which);
   const st=state[which], now=Date.now();
   if(inWait(which)) return "解除 "+hm(st.stages[st.stages.length-1].releaseTs);
-  const mts=manualRelTs(which);   // 進行中の自動ラウンドが無ければ手入力の解除時刻を優先表示
-  if(mts!=null) return (now>=mts?"解除済 ":"解除 ")+state.manualRel[which].hm;
+  const mts=manualRelTs(which);   // 進行中の自動ラウンドが無ければ手動記録の解除時刻を優先表示
+  if(mts!=null) return (now>=mts?"解除済 ":"解除 ")+hm(mts);
   if(!st.firstTs) return "未開始";
   const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which) && poolOf(which)<=0);
   if(finished) return "再開 "+hm(resetTsOf(which));
