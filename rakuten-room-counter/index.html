@@ -270,7 +270,6 @@
   <div class="quicknav">
     <button onclick="jumpTo('secLike')">❤️いいね</button>
     <button onclick="jumpTo('secFollow')">👥フォロー</button>
-    <button onclick="jumpTo('secPost')">📝投稿</button>
     <button onclick="jumpTo('secCal')">🗓️カレンダー</button>
   </div>
 </header>
@@ -344,24 +343,6 @@
     <button class="end-day-btn" id="followEndBtn" onclick="endDay('follow')">🔚 本日終了にする</button>
     <ul class="stage-list" id="followStages"></ul>
     <div class="status-line ok" id="followStatus">開始ボタンを押すと記録スタート</div>
-  </div>
-
-  <!-- 投稿 -->
-  <div class="card post" id="secPost">
-    <div class="card-head"><span class="emoji">📝</span><span class="title">投稿</span><span class="badge" id="postBadge"></span></div>
-    <div class="post-actions" id="postIdle">
-      <button class="start-btn" onclick="startPosting()">⏱ 投稿開始</button>
-    </div>
-    <div id="postActive" style="display:none">
-      <div class="round-now">⏱ 開始 <b id="postStartT">--:--</b> ／ 経過 <b id="postElapsed">0分</b></div>
-      <div class="post-input-row">
-        <button class="btn-circle minus" onclick="decPost()">−</button>
-        <input type="number" id="postInput" class="post-input" min="0" inputmode="numeric" value="0" oninput="setPostCount(this.value)">
-        <button class="btn-circle plus" onclick="incPost()">＋</button>
-      </div>
-      <div class="post-input-label">投稿数を直接入力（＋−でも調整できます）</div>
-      <div class="post-actions"><button class="pbtn stop" onclick="endPosting()">✅ 投稿おわり（記録）</button></div>
-    </div>
   </div>
 
   <!-- 今日の投稿ネタ -->
@@ -483,7 +464,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23e（解除の時間を大きく表示＋✏️修正対応・通知は24時間後・計上日を終了日に・推移グラフに数値表示）";
+const APP_VERSION="2026-07-23f（投稿カード削除・解除の時間を大きく表示＋修正・通知は24時間後・計上日を終了日に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -776,25 +757,6 @@ function renderManualRel(which){
     `</div>`;
 }
 
-/* ---------- 投稿 ---------- */
-function startPosting(){ state.posting={active:true,startTs:Date.now(),count:0}; save(); render(); }
-function setPostCount(v){
-  if(!state.posting.active) return;
-  const n=Math.max(0,parseInt(v,10)||0);
-  const d=n-state.posting.count;
-  state.posting.count=n;
-  bumpDaily("posts", state.posting.startTs, d);
-  save(); render();
-}
-function incPost(){ if(state.posting.active) setPostCount(state.posting.count+1); }
-function decPost(){ if(state.posting.active) setPostCount(state.posting.count-1); }
-function endPosting(){
-  const p=state.posting; if(!p.active) return;
-  state.rounds.push({dateKey:dateKey(p.startTs),startTs:p.startTs,endTs:Date.now(),count:p.count});
-  state.posting={active:false,startTs:null,count:0};
-  toast("ラウンドを記録しました ✅"); save(); render();
-}
-
 /* ---------- カレンダー連携（閉じてても通知） ---------- */
 let calEnabled = localStorage.getItem("rrc_cal")==="on";
 function icsTime(ms){
@@ -924,7 +886,7 @@ function render(){
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
   renderManualRel("like"); renderManualRel("follow");
-  renderPosting(); renderToday(); renderChart(); renderChart2(); renderCumulative(); renderCalendar(); renderDrafts(); renderFollowerCard(); updateNotifBanner();
+  renderToday(); renderChart(); renderChart2(); renderCumulative(); renderCalendar(); renderDrafts(); renderFollowerCard(); updateNotifBanner();
   document.getElementById("sumLike").textContent=summaryText("like");
   document.getElementById("sumFollow").textContent=summaryText("follow");
   document.getElementById("appVer").textContent=APP_VERSION;
@@ -1084,20 +1046,6 @@ function renderLimiter(which){
     statusEl.className="status-line ok";
     statusEl.textContent=`解除済み！${stdDone+1}回目を開始できます`+(pool>0?`（残り${pool}も開始可）`:``);
   }
-}
-
-function renderPosting(){
-  const p=state.posting;
-  document.getElementById("postIdle").style.display=p.active?"none":"flex";
-  document.getElementById("postActive").style.display=p.active?"block":"none";
-  const badge=document.getElementById("postBadge");
-  if(p.active){
-    document.getElementById("postStartT").textContent=hm(p.startTs);
-    document.getElementById("postElapsed").textContent=dur(Date.now()-p.startTs);
-    const inp=document.getElementById("postInput");
-    if(document.activeElement!==inp) inp.value=p.count;
-    badge.className="badge warn"; badge.textContent="投稿中";
-  }else{ badge.className="badge ok"; badge.textContent="待機中"; }
 }
 
 function renderToday(){
