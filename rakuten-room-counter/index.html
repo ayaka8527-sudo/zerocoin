@@ -83,6 +83,19 @@
   .rel-input-info{font-size:12.5px;font-weight:800;text-align:center;border-radius:10px;padding:7px;margin:0 0 10px}
   .rel-input-info.wait{background:#fff3e6;color:var(--warn)}
   .rel-input-info.done{background:#fdecea;color:var(--bad)}
+  .rel-big{border-radius:14px;padding:14px;margin:0 0 10px;text-align:center;line-height:1.25}
+  .rel-big.wait{background:#fff3e6;color:var(--warn)}
+  .rel-big.done{background:#fdecea;color:var(--bad)}
+  .rel-big .lbl{font-size:13px;font-weight:800;opacity:.85}
+  .rel-big .big{font-size:46px;font-weight:900;font-variant-numeric:tabular-nums;margin:2px 0}
+  .rel-big .sub{font-size:12.5px;opacity:.9}
+  .rel-big-btns{display:flex;gap:8px;margin-top:10px}
+  .rel-big-btns .rbtn{flex:1;border:none;border-radius:10px;padding:11px 6px;font-size:13px;
+    font-weight:800;cursor:pointer;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .rel-big-btns .rbtn:active{transform:scale(.96)}
+  .rel-big-btns .rbtn.edit{color:var(--follow)}
+  .rel-big-btns .rbtn.cal{color:var(--rakuten)}
+  .rel-big-btns .rbtn.clr{color:var(--bad)}
   .end-day-btn{width:100%;margin-top:8px;border:1.5px dashed #cbb;background:#faf7f8;color:#7a6b70;
     border-radius:11px;padding:11px;font-size:13px;font-weight:800;cursor:pointer}
   .end-day-btn:active{transform:scale(.97)}
@@ -294,11 +307,9 @@
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <div class="rel-input">
-      <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除</button>
-      <button class="mini-cal" onclick="calManualRel('like')">📅</button>
-      <button class="rel-clear" id="likeRelClear" onclick="clearManualRel('like')" style="display:none">✕</button>
+      <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除（今の時間で記録）</button>
     </div>
-    <div class="rel-input-info" id="likeRelInfo" style="display:none"></div>
+    <div id="likeRelInfo" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
     <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="likeHalfBtn" onclick="halfStage('like')" style="display:none">🌓 半分で終了</button>
@@ -319,11 +330,9 @@
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <div class="rel-input">
-      <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">⏰ フォロー解除</button>
-      <button class="mini-cal" onclick="calManualRel('follow')">📅</button>
-      <button class="rel-clear" id="followRelClear" onclick="clearManualRel('follow')" style="display:none">✕</button>
+      <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">⏰ フォロー解除（今の時間で記録）</button>
     </div>
-    <div class="rel-input-info" id="followRelInfo" style="display:none"></div>
+    <div id="followRelInfo" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
     <button class="finish-btn" id="followFinishBtn" onclick="finishStage('follow')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="followHalfBtn" onclick="halfStage('follow')" style="display:none">🌓 半分で終了</button>
@@ -474,7 +483,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23d（解除の時間＝押した時刻を表示・通知は24時間後・計上日を終了日に・推移グラフに数値表示）";
+const APP_VERSION="2026-07-23e（解除の時間を大きく表示＋✏️修正対応・通知は24時間後・計上日を終了日に・推移グラフに数値表示）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -724,6 +733,21 @@ function clearManualRel(which){
   state.manualRel[which]=null; save(); render();
   toast("解除の時間をクリアしました");
 }
+function editManualRel(which){
+  const cur=manualMarkTs(which);
+  const base = cur!=null ? new Date(cur) : new Date();
+  const inp=prompt(CFG[which].name+"解除の時間を入力（例 "+hm(base.getTime())+"）", hm(base.getTime()));
+  if(inp==null) return;
+  const m=inp.trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).match(/^(\d{1,2})[:：\s]?(\d{2})$/);
+  if(!m){ toast("時刻の形式が読めませんでした（例 14:30）"); return; }
+  const h=+m[1], mi=+m[2];
+  if(h>23||mi>59){ toast("時刻が正しくありません"); return; }
+  base.setHours(h,mi,0,0);
+  if(!state.manualRel) state.manualRel={like:null,follow:null};
+  state.manualRel[which]={markTs:base.getTime(), notified:false};   // 通知は新しい時刻＋24時間で鳴り直す
+  save(); render();
+  toast(CFG[which].name+"解除の時間を "+hm(base.getTime())+" に修正（翌日 "+hm(base.getTime()+DAY)+" に通知）");
+}
 function calManualRel(which){
   const ts=manualNotifyTs(which);
   if(ts==null){ toast("先に「解除の時間を記録」を押してください"); return; }
@@ -732,19 +756,24 @@ function calManualRel(which){
 }
 function renderManualRel(which){
   const info=document.getElementById(which+"RelInfo");
-  const clr=document.getElementById(which+"RelClear");
-  const markTs=manualMarkTs(which);
-  if(clr) clr.style.display = markTs!=null ? "inline-block":"none";
   if(!info) return;
+  const markTs=manualMarkTs(which);
   if(markTs==null){ info.style.display="none"; info.innerHTML=""; return; }
-  const now=Date.now(), notifyTs=markTs+DAY;
+  const now=Date.now(), notifyTs=markTs+DAY, done=now>=notifyTs;
   info.style.display="block";
-  info.className="rel-input-info "+(now>=notifyTs?"done":"wait");
-  const head=`${CFG[which].emoji} ${CFG[which].name}解除の時間：<b>${hm(markTs)}</b>`;
-  const sub = now>=notifyTs
+  info.className="rel-big "+(done?"done":"wait");
+  const sub = done
     ? `✅ 24時間経過（また活動できます）`
     : `🔔 翌日 ${hm(notifyTs)} に通知（あと${countdown(notifyTs-now)}）`;
-  info.innerHTML = head+"<br>"+sub;
+  info.innerHTML =
+    `<div class="lbl">${CFG[which].emoji} ${CFG[which].name}解除の時間</div>`+
+    `<div class="big">${hm(markTs)}</div>`+
+    `<div class="sub">${sub}</div>`+
+    `<div class="rel-big-btns">`+
+      `<button class="rbtn edit" onclick="editManualRel('${which}')">✏️ 修正</button>`+
+      `<button class="rbtn cal" onclick="calManualRel('${which}')">📅 通知登録</button>`+
+      `<button class="rbtn clr" onclick="clearManualRel('${which}')">✕ 消す</button>`+
+    `</div>`;
 }
 
 /* ---------- 投稿 ---------- */
