@@ -58,7 +58,6 @@
   .start-btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
   .like .start-btn{background:var(--like)}
   .follow .start-btn{background:var(--follow)}
-  .post .start-btn,.pbtn.start{background:var(--post)}
   .release-banner{border-radius:14px;padding:12px;margin:0 0 12px;text-align:center;line-height:1.3}
   .release-banner b{display:block;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;margin:2px 0}
   .release-banner small{font-size:12.5px;opacity:.8}
@@ -141,27 +140,6 @@
   .status-line.ok{background:#eafaf0;color:var(--ok)}
   .status-line.wait{background:#fff3e6;color:var(--warn)}
   .status-line.done{background:#fdecea;color:var(--bad)}
-  /* posting */
-  .btn-circle{width:62px;height:62px;border-radius:50%;border:none;font-size:30px;font-weight:900;color:#fff;
-    cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.18)}
-  .btn-circle:active{transform:scale(.9)}
-  .post .btn-circle.plus{background:var(--post)} .post .btn-circle.minus{background:#9bd6b3}
-  .counter{display:flex;align-items:center;justify-content:center;gap:18px;margin:10px 0}
-  .count-num{font-size:48px;font-weight:900;min-width:110px;text-align:center}
-  .post-input-row{display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 2px}
-  .post-input{width:130px;height:64px;font-size:40px;font-weight:900;text-align:center;border:2px solid var(--post);
-    border-radius:14px;color:var(--txt);background:#fff;-moz-appearance:textfield}
-  .post-input::-webkit-outer-spin-button,.post-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .post-input-label{text-align:center;font-size:11.5px;color:var(--muted);margin-bottom:10px}
-  .post-actions{display:flex;gap:10px}
-  .pbtn{flex:1;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer}
-  .pbtn:active{transform:scale(.97)} .pbtn.stop{background:var(--rakuten)}
-  .round-now{background:#eafaf0;border-radius:12px;padding:10px;margin-top:6px;font-size:13.5px}
-  .round-now b{font-size:15px}
-  .rounds{list-style:none;margin:8px 0 0;padding:0}
-  .rounds li{font-size:12.5px;padding:8px 10px;border-radius:10px;background:#faf3f5;margin-bottom:6px;
-    display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .rounds .rtag{font-weight:800;color:var(--rakuten)}
   .totals{display:flex;justify-content:space-around;text-align:center;margin-top:8px}
   .totals .t-num{font-size:22px;font-weight:900}
   .totals .t-lab{font-size:11px;color:var(--muted)}
@@ -178,31 +156,6 @@
   .notice{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:6px}
   .reset-link{display:block;text-align:center;font-size:11.5px;color:var(--muted);margin-top:8px;background:none;border:none;cursor:pointer;width:100%}
   .app-ver{text-align:center;font-size:11px;color:var(--muted);padding:4px 0 14px}
-  /* 投稿ネタ */
-  .draft-input,.draft-textarea{width:100%;border:1.5px solid #e0d3d8;border-radius:11px;padding:11px;
-    font-size:14px;font-family:inherit;margin-bottom:8px;background:#fff;color:var(--txt)}
-  .draft-textarea{min-height:74px;resize:vertical}
-  .draft-add{background:var(--post)}
-  .draft-list{list-style:none;margin:12px 0 0;padding:0}
-  .draft-item{background:#faf3f5;border-radius:11px;padding:10px;margin-bottom:8px}
-  .draft-item.done{opacity:.55;background:#eef7f0}
-  .draft-empty{list-style:none;color:var(--muted);text-align:center;padding:8px;font-size:12.5px}
-  .draft-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
-  .draft-url{flex:1;font-size:12px;color:var(--follow);word-break:break-all}
-  .draft-text{flex:1;font-size:13px;white-space:pre-wrap;word-break:break-word}
-  .dcopy{flex-shrink:0;border:none;background:#ffe3ec;color:var(--rakuten);border-radius:7px;
-    padding:5px 9px;font-size:11.5px;font-weight:800;cursor:pointer}
-  .draft-actions{display:flex;gap:8px;margin-top:4px}
-  .dtoggle{flex:1;border:1.5px solid var(--post);background:#fff;color:var(--post);border-radius:8px;
-    padding:7px;font-size:12px;font-weight:800;cursor:pointer}
-  .draft-item.done .dtoggle{border-color:var(--muted);color:var(--muted)}
-  .ddel{border:1.5px solid #e0b3bd;background:#fff;color:var(--bad);border-radius:8px;
-    padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer}
-  .dedit{flex:1;border:1.5px solid var(--follow);background:#fff;color:var(--follow);border-radius:8px;
-    padding:7px;font-size:12px;font-weight:800;cursor:pointer}
-  .dshow{border:none;background:#f0e8eb;color:var(--muted);border-radius:8px;
-    padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer}
-  .draft-item.editing{outline:2px solid var(--follow);background:#eef5fd}
   /* 日別カレンダー */
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
   .cal-nav button{border:none;background:#f0e8eb;border-radius:8px;padding:6px 16px;font-size:15px;font-weight:800;cursor:pointer;color:var(--rakuten)}
@@ -345,55 +298,22 @@
     <div class="status-line ok" id="followStatus">開始ボタンを押すと記録スタート</div>
   </div>
 
-  <!-- 今日の投稿ネタ -->
+  <!-- 今日の合計 -->
   <div class="card">
-    <div class="card-head"><span class="emoji">🧷</span><span class="title">今日の投稿ネタ（URL・投稿文）</span><span class="badge ok" id="draftRemain"></span></div>
-    <input type="text" id="draftUrl" class="draft-input" placeholder="商品URL（楽天の共有文をそのまま貼ってもOK）">
-    <textarea id="draftText" class="draft-textarea" placeholder="投稿文（紹介文）。空ならURL欄の文章から自動で入ります"></textarea>
-    <button class="start-btn draft-add" id="draftAddBtn" onclick="addDraft()">＋ 保存する</button>
-    <button class="end-day-btn" id="draftEditCancel" onclick="cancelEditDraft()" style="display:none">✖ 編集をやめる</button>
-    <div class="notice" style="margin-top:4px">楽天の「共有」で出る文章（タイトル＋URL）を上の欄に貼って保存すると、URLだけ自動で取り出します。</div>
-    <ul class="draft-list" id="draftList"></ul>
-  </div>
-
-  <!-- 今日のラウンド -->
-  <div class="card">
-    <div class="card-head"><span class="emoji">📒</span><span class="title">今日のラウンド</span></div>
-    <ul class="rounds" id="roundsList"></ul>
+    <div class="card-head"><span class="emoji">📒</span><span class="title">今日の合計</span></div>
     <div class="totals">
       <div><div class="t-num" style="color:var(--like)" id="todayLike">0</div><div class="t-lab">いいね</div></div>
       <div><div class="t-num" style="color:var(--follow)" id="todayFollow">0</div><div class="t-lab">フォロー</div></div>
-      <div><div class="t-num" style="color:var(--post)" id="todayPost">0</div><div class="t-lab">投稿</div></div>
-      <div><div class="t-num" id="todayRounds">0</div><div class="t-lab">ラウンド</div></div>
     </div>
   </div>
 
-  <!-- グラフ -->
+  <!-- フォロワー / フォロー数の推移グラフ -->
   <div class="card">
-    <div class="card-head"><span class="emoji">📊</span><span class="title">推移グラフ</span></div>
+    <div class="card-head"><span class="emoji">👤</span><span class="title">フォロワー / フォロー数の推移</span></div>
     <div class="toggle">
       <button id="wk7" class="on" onclick="setRange(7)">週（7日）</button>
       <button id="wk30" onclick="setRange(30)">月（30日）</button>
     </div>
-    <canvas id="chart"></canvas>
-    <div class="legend">
-      <span><i style="background:var(--like)"></i>いいね</span>
-      <span><i style="background:var(--follow)"></i>フォロー</span>
-      <span><i style="background:var(--post)"></i>投稿</span>
-    </div>
-    <div class="tot-head" id="rangeHead">直近7日間の合計</div>
-    <div class="totals">
-      <div><div class="t-num" style="color:var(--like)" id="rangeLike">0</div><div class="t-lab">いいね</div></div>
-      <div><div class="t-num" style="color:var(--follow)" id="rangeFollow">0</div><div class="t-lab">フォロー</div></div>
-      <div><div class="t-num" style="color:var(--post)" id="rangePost">0</div><div class="t-lab">投稿</div></div>
-    </div>
-    <div class="tot-head">記録開始からの累計</div>
-    <div class="totals">
-      <div><div class="t-num" style="color:var(--like)" id="cumLike">0</div><div class="t-lab">いいね</div></div>
-      <div><div class="t-num" style="color:var(--follow)" id="cumFollow">0</div><div class="t-lab">フォロー</div></div>
-      <div><div class="t-num" style="color:var(--post)" id="cumPost">0</div><div class="t-lab">投稿</div></div>
-    </div>
-    <div class="tot-head">👤 フォロワー / フォロー数の推移</div>
     <canvas id="chart2"></canvas>
     <div class="legend">
       <span><i style="background:#8e44ad"></i>フォロワー数</span>
@@ -464,7 +384,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23f（投稿カード削除・解除の時間を大きく表示＋修正・通知は24時間後・計上日を終了日に）";
+const APP_VERSION="2026-07-23g（投稿ネタ/棒グラフ削除・フォロワー推移グラフのみ・解除時間大きく表示）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -886,7 +806,7 @@ function render(){
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
   renderManualRel("like"); renderManualRel("follow");
-  renderToday(); renderChart(); renderChart2(); renderCumulative(); renderCalendar(); renderDrafts(); renderFollowerCard(); updateNotifBanner();
+  renderToday(); renderChart2(); renderCalendar(); renderFollowerCard(); updateNotifBanner();
   document.getElementById("sumLike").textContent=summaryText("like");
   document.getElementById("sumFollow").textContent=summaryText("follow");
   document.getElementById("appVer").textContent=APP_VERSION;
@@ -1050,20 +970,9 @@ function renderLimiter(which){
 
 function renderToday(){
   const k=todayKey();
-  const today=state.rounds.filter(r=>r.dateKey===k);
-  const list=document.getElementById("roundsList"); list.innerHTML="";
-  if(today.length===0){
-    list.innerHTML='<li style="color:var(--muted);background:none;justify-content:center">まだラウンドがありません</li>';
-  }else today.forEach((r,i)=>{
-    const li=document.createElement("li");
-    li.innerHTML=`<span class="rtag">R${i+1}</span>📝${r.count}　${hm(r.startTs)}–${hm(r.endTs)}　<span style="color:var(--muted)">(${dur(r.endTs-r.startTs)})</span>`;
-    list.appendChild(li);
-  });
   const d=state.daily[k]||{likes:0,follows:0,posts:0};
   document.getElementById("todayLike").textContent=d.likes;
   document.getElementById("todayFollow").textContent=d.follows;
-  document.getElementById("todayPost").textContent=d.posts;
-  document.getElementById("todayRounds").textContent=today.length;
 }
 
 function streak(){
@@ -1081,60 +990,8 @@ function setRange(n){
   chartRange=n;
   document.getElementById("wk7").className=n===7?"on":"";
   document.getElementById("wk30").className=n===30?"on":"";
-  renderChart(); renderChart2(); renderCumulative();
+  renderChart2();
 }
-function renderChart(){
-  const cv=document.getElementById("chart");
-  const dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=170;
-  cv.width=W*dpr; cv.height=H*dpr;
-  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
-  const days=[]; const base=new Date();
-  for(let i=chartRange-1;i>=0;i--){
-    const d=new Date(base); d.setDate(d.getDate()-i);
-    const e=state.daily[dateKey(d.getTime())]||{likes:0,follows:0,posts:0};
-    days.push({d,e});
-  }
-  let max=10; days.forEach(x=>max=Math.max(max,x.e.likes,x.e.follows,x.e.posts));
-  const padB=22,padT=8,padL=4,padR=4,chartH=H-padB-padT;
-  const slot=(W-padL-padR)/days.length;
-  const colors={likes:"#ff5b8a",follows:"#4a9be8",posts:"#27ae60"};
-  const keys=chartRange===7?["likes","follows","posts"]:["likes","follows"];
-  const bw=Math.max(2,Math.min(10,slot/(keys.length+1)));
-  ctx.strokeStyle="#eee"; ctx.beginPath(); ctx.moveTo(padL,H-padB); ctx.lineTo(W-padR,H-padB); ctx.stroke();
-  days.forEach((x,i)=>{
-    const x0=padL+slot*i+(slot-bw*keys.length)/2;
-    keys.forEach((kk,j)=>{
-      const h=x.e[kk]/max*chartH; ctx.fillStyle=colors[kk];
-      ctx.beginPath(); roundRect(ctx,x0+j*bw,H-padB-h,bw-1,h,Math.min(2,bw/2)); ctx.fill();
-    });
-    const show=chartRange===7?true:(i%5===0||i===days.length-1);
-    if(show){ ctx.fillStyle="#bbb"; ctx.font="9px sans-serif"; ctx.textAlign="center";
-      ctx.fillText((x.d.getMonth()+1)+"/"+x.d.getDate(),padL+slot*i+slot/2,H-7); }
-  });
-  ctx.fillStyle="#ccc"; ctx.font="9px sans-serif"; ctx.textAlign="left"; ctx.fillText("max "+max,padL+2,padT+8);
-}
-function roundRect(ctx,x,y,w,h,r){ if(h<=0)return;
-  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,0);ctx.arcTo(x,y+h,x,y,0);ctx.arcTo(x,y,x+w,y,r);ctx.closePath(); }
-function renderCumulative(){
-  // 記録開始からの累計
-  let l=0,f=0,p=0; Object.values(state.daily).forEach(e=>{l+=e.likes;f+=e.follows;p+=e.posts;});
-  document.getElementById("cumLike").textContent=l;
-  document.getElementById("cumFollow").textContent=f;
-  document.getElementById("cumPost").textContent=p;
-  // 選択中の期間（7日/30日）の合計
-  let rl=0,rf=0,rp=0;
-  const base=new Date();
-  for(let i=0;i<chartRange;i++){
-    const d=new Date(base); d.setDate(d.getDate()-i);
-    const e=state.daily[dateKey(d.getTime())];
-    if(e){ rl+=e.likes; rf+=e.follows; rp+=e.posts; }
-  }
-  document.getElementById("rangeHead").textContent=`直近${chartRange}日間の合計`;
-  document.getElementById("rangeLike").textContent=rl;
-  document.getElementById("rangeFollow").textContent=rf;
-  document.getElementById("rangePost").textContent=rp;
-}
-
 /* ---------- フォロワー/フォロー数の推移（ライングラフ） ---------- */
 function renderChart2(){
   const cv=document.getElementById("chart2");
@@ -1323,118 +1180,6 @@ function renderFollowerCard(){
   }
 }
 
-/* ---------- 今日の投稿ネタ（URL・投稿文） ---------- */
-function normUrl(u){ u=(u||"").trim(); if(u && !/^https?:\/\//i.test(u)) u="https://"+u.replace(/^\/+/,""); return u; }
-function addDraft(){
-  const urlRaw=document.getElementById("draftUrl").value;
-  const textRaw=document.getElementById("draftText").value;
-  // 楽天の共有文（タイトル＋#タグ＋URL）をどちらの欄に貼ってもOK：URLだけ自動抽出
-  const combined=urlRaw+"\n"+textRaw;
-  const m=combined.match(/https?:\/\/[^\s　]+/);
-  let u = m ? m[0] : normUrl(urlRaw);
-  let t = textRaw.trim();
-  if(!t){
-    // 投稿文欄が空なら、URL欄からURL・共有定型・空行を除いた残りを投稿文に
-    t = urlRaw.replace(/https?:\/\/[^\s　]+/g,"")
-              .replace(/\[楽天\]\s*#Rakutenichiba/gi,"")
-              .replace(/\s*\n\s*/g," ").trim();
-  }
-  if(!u && !t){ toast("URLか投稿文を入力してください"); return; }
-  if(editingDraft>=0 && state.drafts[editingDraft]){
-    state.drafts[editingDraft].url=u;
-    state.drafts[editingDraft].text=t;
-    editingDraft=-1;
-    toast("投稿ネタを更新しました ✏️");
-  }else{
-    state.drafts.unshift({url:u, text:t, done:false});
-    toast("投稿ネタを保存しました ✅");
-  }
-  document.getElementById("draftUrl").value="";
-  document.getElementById("draftText").value="";
-  save(); render();
-}
-let editingDraft=-1;
-let showDoneDrafts=false;
-function editDraft(i){
-  const d=state.drafts[i]; if(!d) return;
-  document.getElementById("draftUrl").value=d.url||"";
-  document.getElementById("draftText").value=d.text||"";
-  editingDraft=i; render();
-  document.getElementById("draftUrl").scrollIntoView({behavior:"smooth",block:"center"});
-  toast("編集モード：直して「✏️ 更新する」を押してください");
-}
-function cancelEditDraft(){
-  editingDraft=-1;
-  document.getElementById("draftUrl").value="";
-  document.getElementById("draftText").value="";
-  render();
-}
-function toggleShowDone(){ showDoneDrafts=!showDoneDrafts; render(); }
-function deleteDraft(i){
-  state.drafts.splice(i,1);
-  if(editingDraft===i) editingDraft=-1;
-  else if(editingDraft>i) editingDraft--;
-  save(); render(); toast("削除しました");
-}
-function toggleDraftDone(i){
-  state.drafts[i].done=!state.drafts[i].done;
-  if(editingDraft===i) editingDraft=-1;
-  save(); render();
-}
-function copyDraftUrl(i){ copyText(normUrl(state.drafts[i].url)); }
-function copyDraftText(i){ copyText(state.drafts[i].text); }
-function copyText(s){
-  if(!s){ toast("コピーする内容がありません"); return; }
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(s).then(()=>toast("コピーしました 📋")).catch(()=>fallbackCopy(s));
-  }else fallbackCopy(s);
-}
-function fallbackCopy(s){
-  const ta=document.createElement("textarea"); ta.value=s; ta.style.position="fixed"; ta.style.opacity="0";
-  document.body.appendChild(ta); ta.focus(); ta.select();
-  try{ document.execCommand("copy"); toast("コピーしました 📋"); }catch(e){ toast("コピーできませんでした"); }
-  document.body.removeChild(ta);
-}
-function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function renderDrafts(){
-  const list=document.getElementById("draftList");
-  const drafts=state.drafts||[];
-  const remain=drafts.filter(d=>!d.done).length;
-  const doneCount=drafts.length-remain;
-  document.getElementById("draftRemain").textContent=`未投稿 ${remain} 件`;
-  const addBtn=document.getElementById("draftAddBtn");
-  if(addBtn) addBtn.textContent = editingDraft>=0 ? "✏️ 更新する" : "＋ 保存する";
-  const cancelBtn=document.getElementById("draftEditCancel");
-  if(cancelBtn) cancelBtn.style.display = editingDraft>=0 ? "block":"none";
-  list.innerHTML="";
-  if(drafts.length===0){
-    list.innerHTML='<li class="draft-empty">まだ投稿ネタがありません</li>'; return;
-  }
-  drafts.forEach((d,i)=>{
-    if(d.done && !showDoneDrafts) return;   // 投稿済みは非表示
-    const li=document.createElement("li");
-    li.className="draft-item"+(d.done?" done":"")+(i===editingDraft?" editing":"");
-    const urlRow = d.url
-      ? `<div class="draft-row"><a href="${esc(normUrl(d.url))}" target="_blank" rel="noopener" class="draft-url">${esc(d.url)}</a>`+
-        `<button class="dcopy" onclick="copyDraftUrl(${i})">コピー</button></div>` : "";
-    const textRow = d.text
-      ? `<div class="draft-row"><span class="draft-text">${esc(d.text)}</span>`+
-        `<button class="dcopy" onclick="copyDraftText(${i})">コピー</button></div>` : "";
-    li.innerHTML=urlRow+textRow+
-      `<div class="draft-actions">`+
-        `<button class="dtoggle" onclick="toggleDraftDone(${i})">${d.done?"↩︎ 戻す":"✓ 投稿済み"}</button>`+
-        (d.done?``:`<button class="dedit" onclick="editDraft(${i})">✏️ 編集</button>`)+
-        `<button class="ddel" onclick="deleteDraft(${i})">削除</button>`+
-      `</div>`;
-    list.appendChild(li);
-  });
-  if(doneCount>0){
-    const li=document.createElement("li"); li.className="draft-empty";
-    li.innerHTML=`<button class="dshow" onclick="toggleShowDone()">${showDoneDrafts?"投稿済みを隠す":`投稿済み ${doneCount} 件を表示`}</button>`;
-    list.appendChild(li);
-  }
-}
-
 /* ---------- データ ---------- */
 function exportData(){
   const a=document.createElement("a");
@@ -1460,7 +1205,7 @@ function toast(msg){
 }
 
 /* ---------- 起動 ---------- */
-window.addEventListener("resize", ()=>{ renderChart(); renderChart2(); });
+window.addEventListener("resize", ()=>{ renderChart2(); });
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ watch(); render(); } });
 window.addEventListener("focus", ()=>{ watch(); render(); });
 document.getElementById("calToggle").checked = calEnabled;
