@@ -384,7 +384,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23g（投稿ネタ/棒グラフ削除・フォロワー推移グラフのみ・解除時間大きく表示）";
+const APP_VERSION="2026-07-23h（カレンダー通知を5分おき×3回リトライ・投稿ネタ/棒グラフ削除）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -690,7 +690,7 @@ function makeICS(title,whenMs,desc){
     "BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+icsTime(Date.now()),
     "DTSTART:"+icsTime(whenMs),"DTEND:"+icsTime(whenMs+5*60000),
     "SUMMARY:"+title,"DESCRIPTION:"+(desc||"楽天ROOM 活動カウンター"),
-    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:-PT0M","END:VALARM",
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:-PT0M","REPEAT:3","DURATION:PT5M","END:VALARM",
     "END:VEVENT","END:VCALENDAR"
   ].join("\r\n");
 }
