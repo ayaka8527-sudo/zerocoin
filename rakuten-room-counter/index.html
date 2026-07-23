@@ -294,7 +294,7 @@
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <div class="rel-input">
-      <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">🔒 上限になった（今記録）</button>
+      <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除の時間を記録</button>
       <button class="mini-cal" onclick="calManualRel('like')">📅</button>
       <button class="rel-clear" id="likeRelClear" onclick="clearManualRel('like')" style="display:none">✕</button>
     </div>
@@ -319,7 +319,7 @@
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <div class="rel-input">
-      <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">🔒 上限になった（今記録）</button>
+      <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">⏰ フォロー解除の時間を記録</button>
       <button class="mini-cal" onclick="calManualRel('follow')">📅</button>
       <button class="rel-clear" id="followRelClear" onclick="clearManualRel('follow')" style="display:none">✕</button>
     </div>
@@ -474,7 +474,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23c（上限記録ボタン→24時間後に解除通知・計上日を終了日に・推移グラフに数値表示）";
+const APP_VERSION="2026-07-23d（解除の時間＝押した時刻を表示・通知は24時間後・計上日を終了日に・推移グラフに数値表示）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -484,7 +484,7 @@ function migrate(s){
     if(x.dayKey==null){ x.dayKey=dateKey(x.startTs); x.applied=(x.counted!=null?x.counted:x.cap); }
   }); });
   if(!s.manualRel) s.manualRel={like:null, follow:null};
-  else ["like","follow"].forEach(w=>{ if(s.manualRel[w] && s.manualRel[w].relTs==null) s.manualRel[w]=null; });  // 旧形式(key/hm)は破棄
+  else ["like","follow"].forEach(w=>{ if(s.manualRel[w] && s.manualRel[w].markTs==null) s.manualRel[w]=null; });  // 旧形式(key/hm・relTs)は破棄
   if(!s.drafts) s.drafts=[];
   if(!s.followers) s.followers={};
   if(!s.following) s.following={};
@@ -695,10 +695,14 @@ function recordStage(which,s,newKey,amount){
   s.dayKey=newKey; s.applied=amount;
 }
 
-/* ---------- 解除時刻（上限になった時刻＋24時間で通知） ---------- */
-function manualRelTs(which){
+/* ---------- 解除の時間（押した時刻を表示・通知は24時間後の翌日同時刻） ---------- */
+function manualMarkTs(which){   // 押した時刻＝「解除の時間」として表示する値
   const r=state.manualRel && state.manualRel[which];
-  return (r && r.relTs) ? r.relTs : null;
+  return (r && r.markTs) ? r.markTs : null;
+}
+function manualNotifyTs(which){ // 通知する時刻＝押した時刻＋24時間
+  const t=manualMarkTs(which);
+  return t==null ? null : t+DAY;
 }
 // 同じ日ならHH:MMだけ、別日なら「M/D HH:MM」
 function relDayHm(ts){
@@ -708,37 +712,39 @@ function relDayHm(ts){
 }
 function markLimit(which){
   if(!state.manualRel) state.manualRel={like:null,follow:null};
-  const relTs=Date.now()+DAY;   // 24時間後＝翌日の同じ時間
-  state.manualRel[which]={relTs, notified:false};
+  const markTs=Date.now();
+  state.manualRel[which]={markTs, notified:false};
   askNotify(true);
   save(); render();
   if(calEnabled) calManualRel(which);
-  toast(CFG[which].emoji+" 記録！解除は翌日 "+hm(relTs)+"（24時間後）に通知します");
+  toast(CFG[which].emoji+" "+CFG[which].name+"解除の時間を "+hm(markTs)+" で記録（翌日 "+hm(markTs+DAY)+" に通知）");
 }
 function clearManualRel(which){
   if(!state.manualRel) return;
   state.manualRel[which]=null; save(); render();
-  toast("解除の記録をクリアしました");
+  toast("解除の時間をクリアしました");
 }
 function calManualRel(which){
-  const ts=manualRelTs(which);
-  if(ts==null){ toast("先に「上限になった（今記録）」を押してください"); return; }
+  const ts=manualNotifyTs(which);
+  if(ts==null){ toast("先に「解除の時間を記録」を押してください"); return; }
   downloadICS(`${CFG[which].emoji} ${CFG[which].name} 解除！また活動できます`, ts, "楽天ROOM 活動カウンター", "解除アラーム");
-  toast("📅 解除時刻をカレンダーに登録");
+  toast("📅 翌日 "+hm(ts)+" の解除通知をカレンダーに登録");
 }
 function renderManualRel(which){
   const info=document.getElementById(which+"RelInfo");
   const clr=document.getElementById(which+"RelClear");
-  const ts=manualRelTs(which);
-  if(clr) clr.style.display = ts!=null ? "inline-block":"none";
+  const markTs=manualMarkTs(which);
+  if(clr) clr.style.display = markTs!=null ? "inline-block":"none";
   if(!info) return;
-  if(ts==null){ info.style.display="none"; info.textContent=""; return; }
-  const now=Date.now();
+  if(markTs==null){ info.style.display="none"; info.innerHTML=""; return; }
+  const now=Date.now(), notifyTs=markTs+DAY;
   info.style.display="block";
-  info.className="rel-input-info "+(now>=ts?"done":"wait");
-  info.textContent = now>=ts
-    ? `✅ 解除済み（${relDayHm(ts)}）また活動できます`
-    : `⏰ ${relDayHm(ts)} に解除（あと${countdown(ts-now)}）`;
+  info.className="rel-input-info "+(now>=notifyTs?"done":"wait");
+  const head=`${CFG[which].emoji} ${CFG[which].name}解除の時間：<b>${hm(markTs)}</b>`;
+  const sub = now>=notifyTs
+    ? `✅ 24時間経過（また活動できます）`
+    : `🔔 翌日 ${hm(notifyTs)} に通知（あと${countdown(notifyTs-now)}）`;
+  info.innerHTML = head+"<br>"+sub;
 }
 
 /* ---------- 投稿 ---------- */
@@ -871,9 +877,9 @@ function watch(){
         save();
       }
     });
-    // 手動記録（上限になった＋24時間）の解除通知
+    // 手動記録（解除の時間＋24時間）の通知
     const mr=state.manualRel && state.manualRel[w];
-    if(mr && mr.relTs && !mr.notified && now>=mr.relTs){
+    if(mr && mr.markTs && !mr.notified && now>=mr.markTs+DAY){
       mr.notified=true;
       notify(cfg.emoji+" "+cfg.name, "解除されました！また活動できます🎉（24時間経過）");
       save();
@@ -898,8 +904,8 @@ function summaryText(which){
   maybeReset(which);
   const st=state[which], now=Date.now();
   if(inWait(which)) return "解除 "+hm(st.stages[st.stages.length-1].releaseTs);
-  const mts=manualRelTs(which);   // 進行中の自動ラウンドが無ければ手動記録の解除時刻を優先表示
-  if(mts!=null) return (now>=mts?"解除済 ":"解除 ")+hm(mts);
+  const mkt=manualMarkTs(which);  // 進行中の自動ラウンドが無ければ手動記録の解除の時間を優先表示
+  if(mkt!=null) return (now>=mkt+DAY?"解除済 ":"解除 ")+hm(mkt);
   if(!st.firstTs) return "未開始";
   const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which) && poolOf(which)<=0);
   if(finished) return "再開 "+hm(resetTsOf(which));
