@@ -257,11 +257,11 @@
     <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
     <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
-    <div class="release-banner" id="likeBanner" style="display:none"></div>
     <div class="rel-input">
       <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除（今の時間で記録）</button>
     </div>
     <div id="likeRelInfo" style="display:none"></div>
+    <div class="release-banner" id="likeBanner" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
     <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="likeHalfBtn" onclick="halfStage('like')" style="display:none">🌓 半分で終了</button>
@@ -280,11 +280,11 @@
     <div class="card-head"><span class="emoji">👥</span><span class="title">フォロー</span><span class="badge" id="followBadge"></span></div>
     <div class="progress-num"><b id="followDone">0</b> / 8 回　（100×8＝800）</div>
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
-    <div class="release-banner" id="followBanner" style="display:none"></div>
     <div class="rel-input">
       <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">⏰ フォロー解除（今の時間で記録）</button>
     </div>
     <div id="followRelInfo" style="display:none"></div>
+    <div class="release-banner" id="followBanner" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
     <button class="finish-btn" id="followFinishBtn" onclick="finishStage('follow')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="followHalfBtn" onclick="halfStage('follow')" style="display:none">🌓 半分で終了</button>
@@ -384,7 +384,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23h（カレンダー通知を5分おき×3回リトライ・投稿ネタ/棒グラフ削除）";
+const APP_VERSION="2026-07-23i（今日の解除時間を次の解除より上に表示・カレンダー通知リトライ）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
