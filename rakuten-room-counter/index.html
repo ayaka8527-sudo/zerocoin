@@ -385,7 +385,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-24（24時間後に解除の時間を自動クリア＋回数カウントも1回目からリセット）";
+const APP_VERSION="2026-07-24b（解除の時間を記録した瞬間に回数カウントも即リセット）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -625,6 +625,8 @@ function markLimit(which){
   if(!state.manualRel) state.manualRel={like:null,follow:null};
   const markTs=Date.now();
   state.manualRel[which]={markTs, notified:false};
+  const st=state[which];
+  st.firstTs=null; st.stages=[]; st.ended=false;   // 記録した瞬間に1回目からの回数もリセット
   askNotify(true);
   save(); render();
   if(calEnabled) calManualRel(which);
