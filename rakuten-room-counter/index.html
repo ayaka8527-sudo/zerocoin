@@ -385,7 +385,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-23j（解除時間の色を区別・待機中ボタンを小さく）";
+const APP_VERSION="2026-07-24（24時間後に解除の時間を自動クリア＋回数カウントも1回目からリセット）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -792,8 +792,9 @@ function watch(){
     // 手動記録（解除の時間＋24時間）の通知
     const mr=state.manualRel && state.manualRel[w];
     if(mr && mr.markTs && !mr.notified && now>=mr.markTs+DAY){
-      mr.notified=true;
       notify(cfg.emoji+" "+cfg.name, "解除されました！また活動できます🎉（24時間経過）");
+      state.manualRel[w]=null;               // また記録できる状態に自動で戻す
+      st.firstTs=null; st.stages=[]; st.ended=false;   // 1回目からカウントし直せるようにリセット
       save();
     }
   });
