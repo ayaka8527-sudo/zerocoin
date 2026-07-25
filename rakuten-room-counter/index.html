@@ -415,7 +415,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-25b（上部バナーに解除の時間を縦並び表示＋⏰記録/📅登録ボタン）";
+const APP_VERSION="2026-07-25c（24時間たった解除の時間を確実に自動クリア＝未記録に戻す）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -482,7 +482,7 @@ function maybeReset(which){
 // 「解除の時間」を記録していれば毎日その時刻に解除される前提で、起点より後の最初の同時刻を返す
 function manualResetAfter(which, afterTs){
   const mk=manualMarkTs(which);
-  if(mk==null) return null;
+  if(mk==null || Date.now()>=mk+DAY) return null;   // 24時間たった記録は使わない（消える予定のもの）
   const k=Math.floor((afterTs-mk)/DAY)+1;   // afterTs より確実に後ろの回
   return mk + k*DAY;
 }
@@ -840,8 +840,22 @@ function updateNotifBanner(){
 }
 
 /* ---------- 解除タイミングの監視 ---------- */
+// 24時間たった「解除の時間」を片付けて未記録に戻す（maybeResetより先に必ず通す）
+function expireMark(w){
+  const mr=state.manualRel && state.manualRel[w];
+  if(!(mr && mr.markTs && Date.now()>=mr.markTs+DAY)) return false;
+  const st=state[w], relTs=mr.markTs+DAY;            // 解除された瞬間
+  // ※ notified の有無で条件を分けない（旧版が notified:true を付けた記録が消えずに残るため）
+  if(!mr.notified) notify(CFG[w].emoji+" "+CFG[w].name, "解除されました！また活動できます🎉（24時間経過）");
+  state.manualRel[w]=null;
+  // 解除より前に始めた回だけ前サイクル扱いでリセット（解除後に始めた分は残す）
+  if(!st.firstTs || st.firstTs<relTs){ st.firstTs=null; st.stages=[]; st.ended=false; }
+  save();
+  return true;
+}
 function watch(){
   ["like","follow"].forEach(w=>{
+    expireMark(w);
     if(maybeReset(w)){
       notify(CFG[w].emoji+" "+CFG[w].name, "リセットされました！また最初から活動できます🎉");
       save(); return;
@@ -855,14 +869,6 @@ function watch(){
         save();
       }
     });
-    // 手動記録（解除の時間＋24時間）の通知
-    const mr=state.manualRel && state.manualRel[w];
-    if(mr && mr.markTs && !mr.notified && now>=mr.markTs+DAY){
-      notify(cfg.emoji+" "+cfg.name, "解除されました！また活動できます🎉（24時間経過）");
-      state.manualRel[w]=null;               // また記録できる状態に自動で戻す
-      st.firstTs=null; st.stages=[]; st.ended=false;   // 1回目からカウントし直せるようにリセット
-      save();
-    }
   });
 }
 
@@ -896,9 +902,10 @@ function renderRelSummary(which){
   const p=summaryParts(which);
   document.getElementById("sum"+cap+"K").textContent=p.k;
   document.getElementById("sum"+cap).textContent=p.v;
-  const mk=manualMarkTs(which), b=document.getElementById("mark"+cap);
-  if(mk==null){ b.textContent="未記録"; b.className="none"; }
-  else{ b.textContent=hm(mk)+" → 次 "+relDayHm(manualResetAfter(which, Date.now())); b.className=""; }
+  const mk=manualMarkTs(which), nx=manualResetAfter(which, Date.now()), b=document.getElementById("mark"+cap);
+  // 24時間たった記録は nx が null（＝クリア待ち）。未記録として見せる
+  if(mk==null || nx==null){ b.textContent="未記録"; b.className="none"; }
+  else{ b.textContent=hm(mk)+" → 次 "+relDayHm(nx); b.className=""; }
 }
 
 function renderLimiter(which){
