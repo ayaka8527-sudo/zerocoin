@@ -62,6 +62,7 @@
   .release-banner{border-radius:14px;padding:12px;margin:0 0 12px;text-align:center;line-height:1.3}
   .release-banner b{display:block;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;margin:2px 0}
   .release-banner small{font-size:12.5px;opacity:.8}
+  .release-banner .nextline{display:block;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,.15);font-size:13px;font-weight:700}
   .release-banner.wait{background:#fff3e6;color:var(--warn)}
   .release-banner.done{background:#fdecea;color:var(--bad)}
   .rel-input{display:flex;align-items:center;gap:7px;margin:0 0 8px;background:#fff7fa;
@@ -385,7 +386,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-24b（解除の時間を記録した瞬間に回数カウントも即リセット）";
+const APP_VERSION="2026-07-25（上限後に開始できる時刻＝解除の時間ベース／最終回はその時刻をカレンダー登録）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -449,16 +450,38 @@ function maybeReset(which){
   if(st.firstTs && rt && Date.now()>=rt){ st.firstTs=null; st.stages=[]; st.ended=false; return true; }
   return false;
 }
-// 次に開始できる時刻＝「1回目の開始＋24時間」と「最終回の解除（開始＋1時間）」の遅い方
+// 「解除の時間」を記録していれば毎日その時刻に解除される前提で、起点より後の最初の同時刻を返す
+function manualResetAfter(which, afterTs){
+  const mk=manualMarkTs(which);
+  if(mk==null) return null;
+  const k=Math.floor((afterTs-mk)/DAY)+1;   // afterTs より確実に後ろの回
+  return mk + k*DAY;
+}
+// 次に開始できる時刻＝「解除の時間（未記録なら1回目の開始＋24時間）」と「最終回の解除（開始＋1時間）」の遅い方
 function resetTsOf(which){
   const st=state[which];
   if(!st.firstTs) return null;
-  let t=st.firstTs+DAY;
+  let t=manualResetAfter(which, st.firstTs);
+  if(t==null) t=st.firstTs+DAY;
   if(st.stages.length){
     const last=st.stages[st.stages.length-1];
     if(last.releaseTs>t) t=last.releaseTs;
   }
   return t;
+}
+// 次に開始できる時刻が「解除の時間」基準かどうか（表示の注記用）
+function resetFromManual(which){
+  const st=state[which];
+  if(!st.firstTs) return false;
+  const t=manualResetAfter(which, st.firstTs);
+  if(t==null) return false;
+  return t===resetTsOf(which);
+}
+// 規定の最終回（いいね3回目／フォロー8回目）かどうか
+function isLastStd(which,i){
+  const s=state[which].stages[i];
+  if(!s || s.spare || s.extra) return false;
+  return stdPosOf(which,i)>=CFG[which].counts.length;
 }
 function inWait(which){
   const st=state[which];
@@ -721,14 +744,23 @@ function releaseMsg(which,i){
   if(s.spare) return "予備の枠が終了しました🎉";
   if(s.extra) return "残り枠が終了しました🎉";
   const pos=stdPosOf(which,i);
-  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 リセットは "+(st.firstTs?hm(resetTsOf(which)):"-")+" ごろ";
+  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 次に開始できるのは "+(st.firstTs?relDayHm(resetTsOf(which)):"-");
   return "解除！"+(pos+1)+"回目（"+cfg.counts[pos]+"）を開始OK";
 }
 function alarmTitleFor(which,i){
   return `${CFG[which].emoji} ${CFG[which].name} `+releaseMsg(which,i);
 }
 function registerStageAlarm(which,i){
-  const s=state[which].stages[i];
+  const cfg=CFG[which], s=state[which].stages[i];
+  // 規定の最終回（いいね3回目／フォロー8回目）は、次に開始できるのが「解除の時間」なのでそちらを登録
+  if(isLastStd(which,i)){
+    const rt=resetTsOf(which);
+    if(rt){
+      downloadICS(`${cfg.emoji} ${cfg.name} 解除！また活動できます`, rt, "楽天ROOM 活動カウンター", "解除アラーム");
+      toast("📅 次に開始できる "+relDayHm(rt)+" をカレンダーに登録");
+      return;
+    }
+  }
   downloadICS(alarmTitleFor(which,i), s.releaseTs, "楽天ROOM 活動カウンター", "解除アラーム");
   toast("📅 解除アラームをカレンダーに登録");
 }
@@ -736,8 +768,8 @@ function reRegisterStage(which,i){ registerStageAlarm(which,i); }
 function registerReset(which){
   const st=state[which];
   if(!st.firstTs) return;
-  downloadICS(`${CFG[which].emoji} ${CFG[which].name}リセット完了！また活動できます`, resetTsOf(which), "楽天ROOM 活動カウンター", "リセットアラーム");
-  toast("📅 リセット時刻をカレンダーに登録");
+  downloadICS(`${CFG[which].emoji} ${CFG[which].name}解除！また活動できます`, resetTsOf(which), "楽天ROOM 活動カウンター", "リセットアラーム");
+  toast("📅 次に開始できる "+relDayHm(resetTsOf(which))+" をカレンダーに登録");
 }
 function toggleCal(el){
   calEnabled=el.checked;
@@ -819,11 +851,12 @@ function summaryText(which){
   maybeReset(which);
   const st=state[which], now=Date.now();
   if(inWait(which)) return "解除 "+hm(st.stages[st.stages.length-1].releaseTs);
-  const mkt=manualMarkTs(which);  // 進行中の自動ラウンドが無ければ手動記録の解除の時間を優先表示
-  if(mkt!=null) return (now>=mkt+DAY?"解除済 ":"解除 ")+hm(mkt);
+  // その日の枠を使い切っていれば「次に開始できる時刻」を最優先で表示
+  const finished = st.firstTs && (st.ended || (standardDone(which)>=CFG[which].counts.length && poolOf(which)<=0));
+  if(finished) return "再開 "+relDayHm(resetTsOf(which));
+  const mkt=manualMarkTs(which);  // 進行中のラウンドが無ければ手動記録の解除の時間を表示
+  if(mkt!=null && !st.firstTs) return (now>=mkt+DAY?"解除済 ":"解除 ")+hm(mkt);
   if(!st.firstTs) return "未開始";
-  const finished = st.ended || (standardDone(which)>=CFG[which].counts.length && !inWait(which) && poolOf(which)<=0);
-  if(finished) return "再開 "+hm(resetTsOf(which));
   return "開始OK";
 }
 
@@ -843,13 +876,18 @@ function renderLimiter(which){
 
   // 解除時刻バナー（目立つ表示）
   const banner=document.getElementById(which+"Banner");
+  const fromManual=resetFromManual(which);
+  const note=fromManual?`（${cfg.name}解除の時間）`:"（1回目の開始＋24時間）";
   if(waiting){
     const last=st.stages[st.stages.length-1];
     banner.style.display="block"; banner.className="release-banner wait";
-    banner.innerHTML=`⏰ 次の解除 <b>${hm(last.releaseTs)}</b><small>あと ${countdown(last.releaseTs-now)}</small>`;
+    banner.innerHTML=`⏰ 次の解除 <b>${hm(last.releaseTs)}</b><small>あと ${countdown(last.releaseTs-now)}</small>`+
+      // 規定の最終回（3回目/8回目）中は、この1時間のあとは翌日の解除まで開始できない
+      (isLastStd(which, st.stages.length-1) && resetTs
+        ? `<span class="nextline">🔁 次に開始できるのは ${relDayHm(resetTs)}${note}</span>` : "");
   }else if(finished && resetTs){
     banner.style.display="block"; banner.className="release-banner done";
-    banner.innerHTML=`🔁 次に開始できる <b>${hm(resetTs)}</b><small>あと ${countdown(resetTs-now)}</small>`;
+    banner.innerHTML=`🔁 次に開始できる <b>${relDayHm(resetTs)}</b><small>あと ${countdown(resetTs-now)}${note}</small>`;
   }else{
     banner.style.display="none";
   }
@@ -888,7 +926,7 @@ function renderLimiter(which){
   // メインの開始ボタン
   const btn=document.getElementById(which+"Btn");
   if(finished){
-    btn.disabled=true; btn.textContent=`🔁 次の開始まで ${countdown(resetTs-now)}`;
+    btn.disabled=true; btn.textContent=`🔁 次の開始 ${relDayHm(resetTs)}（あと${countdown(resetTs-now)}）`;
   }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
   else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
