@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="../rakuten-room-counter/apple-touch-icon-180.png" />
+    <title>楽天ROOM フォロー回り</title>
+    <style>
+      :root { --pink: #e0405f; --line: #f0e6e8; --sub: #8b8b90; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+        font-family: -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+        color: #333; background: #fff;
+      }
+      h1 { font-size: 16px; margin: 0 0 2px; }
+      .sub { font-size: 11px; color: var(--sub); margin: 0 0 12px; }
+
+      .bar { height: 8px; background: #f2e6e8; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+      .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff5a7a, #ff8a5a); }
+      .prog { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 12px; }
+      .prog b { color: var(--pink); font-size: 15px; }
+
+      .card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+      .mark { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; margin-bottom: 6px; }
+      .mark.measured { background: #fdeaf0; color: var(--pink); }
+      .mark.hope { background: #eef4fd; color: #3b6ea5; }
+      .name { font-size: 18px; font-weight: 700; margin: 2px 0 4px; word-break: break-all; }
+      .meta { font-size: 12px; color: var(--sub); line-height: 1.5; }
+
+      button { font-family: inherit; border: none; cursor: pointer; }
+      .big {
+        display: block; width: 100%; padding: 16px; border-radius: 12px;
+        font-size: 16px; font-weight: 700; margin-top: 8px;
+      }
+      .open { background: linear-gradient(135deg, #ff5a7a, #ff7a5a); color: #fff; }
+      .did { background: #fff; color: var(--pink); border: 2px solid var(--pink); }
+      .skip { background: #fff; color: #999; border: 1px solid #ddd; font-weight: 400; font-size: 14px; padding: 12px; }
+      .row { display: flex; gap: 8px; }
+      .row > button { flex: 1; }
+
+      details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 14px; }
+      summary { font-size: 13px; font-weight: 600; color: #666; }
+      textarea { width: 100%; height: 90px; border: 1px solid #e2e2e6; border-radius: 8px; padding: 8px; font-size: 12px; margin-top: 8px; }
+      .mini { background: #fafafc; border: 1px solid #e6e6ea; color: #555; border-radius: 8px; padding: 10px; font-size: 13px; width: 100%; margin-top: 6px; }
+      .note { font-size: 11px; color: var(--sub); line-height: 1.5; margin: 8px 0 0; }
+      .msg { font-size: 12px; color: var(--pink); min-height: 16px; margin-top: 8px; }
+      .empty { text-align: center; color: var(--sub); font-size: 13px; padding: 24px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>🔁 フォロー回り</h1>
+    <p class="sub">開いて、あなたがフォローして、✓で次へ。<b>自動フォローはしません。</b></p>
+
+    <div class="bar"><i id="fill"></i></div>
+    <div class="prog">
+      <span><b id="pos">–</b> / <span id="total">–</span> 人目</span>
+      <span>今日 <b id="today">0</b> 人</span>
+    </div>
+
+    <div id="main"></div>
+    <p class="msg" id="msg"></p>
+
+    <details>
+      <summary>📥 リストを読み込む</summary>
+      <button class="mini" id="load-net">🌐 最新のリストを取り込む</button>
+      <p class="note">
+        Macが夜に作ったリストを読みます。うまくいかないときは、拡張の「📱 iPhoneへ渡す」でコピーした中身を下に貼ってください。
+      </p>
+      <textarea id="paste" placeholder="ここに貼り付け"></textarea>
+      <button class="mini" id="load-paste">貼り付けた中身を読み込む</button>
+      <button class="mini" id="reset">↩️ 最初から回り直す</button>
+    </details>
+
+    <details>
+      <summary>📤 結果を書き出す</summary>
+      <p class="note">
+        iPhoneでフォローした人を、Macの拡張に取り込むためのものです。コピーして拡張の「📥 iPhoneの結果を取り込む」に貼ってください。
+        <b>これをやらないと「フォローの答え合わせ」に入りません。</b>
+      </p>
+      <button class="mini" id="copy-result">📋 結果をコピー</button>
+      <button class="mini" id="clear-result">書き出した記録を消す</button>
+    </details>
+
+    <script>
+      // 楽天ROOM フォロー回り（iPhone用）
+      //
+      // 拡張と役割を分ける：重い計算（候補集め・フォロバ率の実測・並べ替え）はMacがやり、
+      // ここは **開く・押す・記録する** だけ。先読みはしない（iOSでは裏でタブを温められない）。
+      // ★フォローボタンを押すのは本人。このページはROOMを操作しません。
+      const $ = (s) => document.querySelector(s);
+      const KEY = "roomFollowPhone";
+      const DATA_URL = "data/follow.json";
+
+      const load = () => {
+        try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; }
+      };
+      const save = (s) => localStorage.setItem(KEY, JSON.stringify(s));
+      let S = load();
+      S.items = S.items || [];
+      S.i = S.i || 0;
+      S.done = S.done || {}; // {handle: {at, ...属性}} 拡張へ返すぶん
+      S.skip = S.skip || {};
+
+      const todayStr = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+      const doneToday = () =>
+        Object.values(S.done).filter((d) => d.day === todayStr()).length;
+
+      function msg(t) {
+        $("#msg").textContent = t || "";
+        if (t) setTimeout(() => ($("#msg").textContent = ""), 3000);
+      }
+
+      // まだ済んでいない人のうち、いまの位置から次の1人
+      function cur() {
+        for (let n = 0; n < S.items.length; n++) {
+          const j = (S.i + n) % S.items.length;
+          const it = S.items[j];
+          if (it && !S.done[it.h] && !S.skip[it.h]) {
+            S.i = j;
+            return it;
+          }
+        }
+        return null;
+      }
+
+      function render() {
+        const total = S.items.length;
+        const left = S.items.filter((x) => !S.done[x.h] && !S.skip[x.h]).length;
+        const pos = total - left + 1;
+        $("#total").textContent = total || "–";
+        $("#pos").textContent = total ? Math.min(pos, total) : "–";
+        $("#today").textContent = doneToday();
+        $("#fill").style.width = total ? Math.round(((total - left) / total) * 100) + "%" : "0%";
+
+        const it = cur();
+        if (!total) {
+          $("#main").innerHTML =
+            '<div class="empty">リストがありません。<br>下の「📥 リストを読み込む」から入れてください。</div>';
+          return;
+        }
+        if (!it) {
+          $("#main").innerHTML =
+            '<div class="empty">🎉 今回ぶんは終わりました！<br>「📤 結果を書き出す」でMacに戻してください。</div>';
+          return;
+        }
+        const markCls = it.t === "measured" ? "measured" : "hope";
+        const markTxt = it.t === "measured" ? "◎ 実測" + (it.fb != null ? " " + it.fb + "%" : "") : "○ 見込み";
+        const meta = [];
+        if (it.f) meta.push("フォロワー " + Number(it.f).toLocaleString("ja-JP"));
+        if (it.g != null) meta.push("1日 " + it.g + "人フォロー");
+        if (it.age != null) meta.push("開設 " + it.age + "日");
+        if (it.v) meta.push(it.v);
+        $("#main").innerHTML =
+          '<div class="card">' +
+          '<span class="mark ' + markCls + '">' + markTxt + "</span>" +
+          '<div class="name">' + esc(it.n || it.h) + "</div>" +
+          '<div class="meta">' + esc(meta.join("・")) + "</div>" +
+          "</div>" +
+          '<button class="big open" id="go">🔁 この人を開く</button>' +
+          '<div class="row">' +
+          '<button class="big did" id="did">✓ フォローした</button>' +
+          "</div>" +
+          '<button class="big skip" id="sk">この人はやめる</button>';
+        $("#go").onclick = () => window.open("https://room.rakuten.co.jp/" + it.h, "_blank");
+        $("#did").onclick = () => {
+          S.done[it.h] = { ...it, at: Date.now(), day: todayStr() };
+          S.i = (S.i + 1) % S.items.length;
+          save(S); render();
+        };
+        $("#sk").onclick = () => {
+          S.skip[it.h] = Date.now();
+          S.i = (S.i + 1) % S.items.length;
+          save(S); render();
+        };
+      }
+      const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+      function applyList(json) {
+        const d = typeof json === "string" ? JSON.parse(json) : json;
+        const items = (d.items || d).filter((x) => x && x.h);
+        if (!items.length) throw new Error("中身がありません");
+        S.items = items;
+        S.i = 0;
+        S.skip = {}; // 新しいリストでは見送りも作り直す（済んだ人はMac側で外れている）
+        save(S);
+        render();
+        return items.length;
+      }
+
+      $("#load-net").onclick = async () => {
+        try {
+          const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          msg(applyList(await r.json()) + "人を読み込みました");
+        } catch (e) {
+          msg("取れませんでした：" + e.message);
+        }
+      };
+      $("#load-paste").onclick = () => {
+        try {
+          msg(applyList($("#paste").value.trim()) + "人を読み込みました");
+          $("#paste").value = "";
+        } catch (e) {
+          msg("読めませんでした：" + e.message);
+        }
+      };
+      $("#reset").onclick = () => {
+        if (!confirm("最初から回り直します。フォロー済みの記録は残ります。")) return;
+        S.i = 0; S.skip = {}; save(S); render();
+      };
+      $("#copy-result").onclick = async () => {
+        const out = JSON.stringify({ from: "phone", at: Date.now(), done: Object.values(S.done) });
+        try {
+          await navigator.clipboard.writeText(out);
+          msg(Object.keys(S.done).length + "人ぶんコピーしました");
+        } catch (e) {
+          $("#paste").value = out;
+          msg("コピーできないので下の欄に出しました。長押しで選んでコピーしてください");
+        }
+      };
+      $("#clear-result").onclick = () => {
+        if (!confirm("書き出した記録（フォローした人）を消します。よろしいですか？")) return;
+        S.done = {}; save(S); render(); msg("消しました");
+      };
+
+      render();
+      // 初回だけ、置いてあるリストを自動で読む
+      if (!S.items.length) $("#load-net").click();
+    </script>
+  </body>
+</html>
