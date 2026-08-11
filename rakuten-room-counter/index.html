@@ -286,7 +286,7 @@
   <!-- いいね -->
   <div class="card like" id="secLike">
     <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
-    <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
+    <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋200＋300＝800）</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="rel-input">
       <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除（今の時間で記録）</button>
@@ -411,11 +411,11 @@
 "use strict";
 const HOUR=3600000, DAY=86400000;
 const CFG = {
-  like:   { counts:[300,300,200],                     spareCap:200, emoji:"❤️", name:"いいね", color:"--like" },
+  like:   { counts:[300,200,300],                     spareCap:200, emoji:"❤️", name:"いいね", color:"--like" },
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-07-25c（24時間たった解除の時間を確実に自動クリア＝未記録に戻す）";
+const APP_VERSION="2026-08-11a（いいねを300→200→300に。各回の数は✏️で手入力できる）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -595,6 +595,21 @@ function editStartTime(which,i){
   st.firstTs=Math.min.apply(null, st.stages.map(x=>x.startTs));   // リセット起点も追従
   save(); render();
   toast("開始 "+hm(ts)+" → 解除 "+hm(ts+HOUR)+" に修正しました。カレンダーは📅で登録し直してください");
+}
+// この回で実際にやった数を手入力（規定と違う日だけ使う）
+function editCount(which,i){
+  const st=state[which]; const s=st.stages[i]; if(!s) return;
+  const cur=countedOf(s);
+  const inp=prompt("この回で実際にやった数を入力してください（規定 "+s.cap+"）", cur);
+  if(inp==null) return;
+  const z=String(inp).trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[,、\s]/g,"");
+  if(!/^\d+$/.test(z)){ toast("数字で入力してください（例 270）"); return; }
+  const n=+z;
+  if(n>5000){ toast("数が大きすぎます"); return; }
+  s.counted=n; s.edited=true; s.closed=true; s.finished=(n>=s.cap);
+  recordStage(which, s, s.dayKey||todayKey(), n);
+  save(); render();
+  toast("この回を "+n+" で記録しました"+(n<s.cap?"（残り"+(s.cap-n)+"は「▶ 残りを開始」で使えます）":""));
 }
 function finishStage(which){
   const st=state[which];
@@ -947,16 +962,19 @@ function renderLimiter(which){
     const li=document.createElement("li"); li.className="stage-item";
     const released=now>=s.releaseTs;
     const label = s.spare ? "予備" : s.extra ? "追加" : (++stdSeen)+"回目";
-    const cnt = s.finished
-      ? `<span class="cnt full">✅満了 ${countedOf(s)}</span>`
-      : s.closed
-        ? `<span class="cnt halfc">🌓半分で確定 ${countedOf(s)}/${s.cap}</span>`
-        : `<span class="cnt halfc">半分 ${countedOf(s)}/${s.cap}</span>`;
+    const cnt = s.edited
+      ? `<span class="cnt ${countedOf(s)>=s.cap?"full":"halfc"}">✏️手入力 ${countedOf(s)}${countedOf(s)>=s.cap?"":"/"+s.cap}</span>`
+      : s.finished
+        ? `<span class="cnt full">✅満了 ${countedOf(s)}</span>`
+        : s.closed
+          ? `<span class="cnt halfc">🌓半分で確定 ${countedOf(s)}/${s.cap}</span>`
+          : `<span class="cnt halfc">半分 ${countedOf(s)}/${s.cap}</span>`;
+    const editBtn=`<button class="mini-cal" onclick="editCount('${which}',${i})" title="この回の数を手入力">✏️</button>`;
     const tail = released
       ? `<span class="tail done">解除済み</span>`+
-        `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`
+        `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+editBtn
       : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+
-        `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+
+        `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+editBtn+
         `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
