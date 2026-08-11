@@ -415,7 +415,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-11a（いいねを300→200→300に。各回の数は✏️で手入力できる）";
+const APP_VERSION="2026-08-11b（解除の時間に同じ時刻を入力しても記録が消えない／回数が飛ばない）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -708,19 +708,26 @@ function clearManualRel(which){
   toast("解除の時間をクリアしました");
 }
 function editManualRel(which){
-  const cur=manualMarkTs(which);
-  const base = cur!=null ? new Date(cur) : new Date();
-  const inp=prompt(CFG[which].name+"解除の時間を入力（例 "+hm(base.getTime())+"）", hm(base.getTime()));
+  const now=Date.now(), cur=manualMarkTs(which);
+  const shown=hm(cur!=null?cur:now);
+  const inp=prompt(CFG[which].name+"解除の時間を入力（例 "+shown+"）", shown);
   if(inp==null) return;
   const m=inp.trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).match(/^(\d{1,2})[:：\s]?(\d{2})$/);
   if(!m){ toast("時刻の形式が読めませんでした（例 14:30）"); return; }
   const h=+m[1], mi=+m[2];
   if(h>23||mi>59){ toast("時刻が正しくありません"); return; }
-  base.setHours(h,mi,0,0);
+  // 入力は前の記録の日付ではなく必ず「今日」基準。未来になる時刻は前日の同時刻とみなす（＝常に直近24時間以内）
+  const d=new Date(now); d.setHours(h,mi,0,0);
+  let ts=d.getTime();
+  if(ts>now) ts-=DAY;
+  // 今と同じ「分」を入れたときは秒まで今の時刻を使う（23:15:20/23:15:30のような秒ズレで通知が早まらないよう⏰と同じ結果に）
+  const nd=new Date(now);
+  if(h===nd.getHours() && mi===nd.getMinutes()) ts=now;
+  if(now-ts>=DAY){ toast("その時刻はもう24時間以上前です。記録しませんでした"); return; }
   if(!state.manualRel) state.manualRel={like:null,follow:null};
-  state.manualRel[which]={markTs:base.getTime(), notified:false};   // 通知は新しい時刻＋24時間で鳴り直す
+  state.manualRel[which]={markTs:ts, notified:false};   // 通知は新しい時刻＋24時間で鳴り直す
   save(); render();
-  toast(CFG[which].name+"解除の時間を "+hm(base.getTime())+" に修正（翌日 "+hm(base.getTime()+DAY)+" に通知）");
+  toast(CFG[which].name+"解除の時間を "+relDayHm(ts)+" に修正（"+relDayHm(ts+DAY)+" に通知）");
 }
 function calManualRel(which){
   const ts=manualNotifyTs(which);
