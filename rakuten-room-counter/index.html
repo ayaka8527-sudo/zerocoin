@@ -415,7 +415,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-11b（解除の時間に同じ時刻を入力しても記録が消えない／回数が飛ばない）";
+const APP_VERSION="2026-08-12a（解除の時間＝1回目の開始時刻。記録すると同時刻で1回目が始まる）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -590,11 +590,29 @@ function editStartTime(which,i){
   base.setHours(h,mi,0,0);
   let ts=base.getTime();
   if(ts>Date.now()) ts-=DAY;   // 未来の時刻なら前日の時刻とみなす
+  const wasLinked = linkedFirst(which,i);   // 解除の時間と同時刻だった1回目なら、解除の時間も一緒に動かす
   s.startTs=ts; s.releaseTs=ts+HOUR;
   s.notified = Date.now()>=s.releaseTs;   // 解除がまだ先なら通知は改めて鳴る
   st.firstTs=Math.min.apply(null, st.stages.map(x=>x.startTs));   // リセット起点も追従
+  if(wasLinked){ state.manualRel[which]={markTs:ts, notified:Date.now()>=ts+DAY}; }
   save(); render();
-  toast("開始 "+hm(ts)+" → 解除 "+hm(ts+HOUR)+" に修正しました。カレンダーは📅で登録し直してください");
+  toast("開始 "+hm(ts)+" → 解除 "+hm(ts+HOUR)+" に修正しました"+(wasLinked?"（解除の時間も同じ "+hm(ts)+" に）":"")+"。カレンダーは📅で登録し直してください");
+}
+// 「解除の時間」と同時刻で始まった1回目か（＝2つが連動している状態か）
+function linkedFirst(which,i){
+  const s=state[which].stages[i];
+  return !!(s && i===0 && !s.spare && !s.extra && manualMarkTs(which)===s.startTs);
+}
+// 指定時刻に1回目を開始する（解除の時間を記録したときに同時刻でスタートさせる用）
+function startFirstAt(which,ts){
+  const cfg=CFG[which], st=state[which];
+  const cap=cfg.counts[0], c=half(cap);
+  const stg={ startTs:ts, releaseTs:ts+HOUR, cap, counted:c, finished:false, spare:false, extra:false,
+              notified:Date.now()>=ts+HOUR, dayKey:null, applied:0 };
+  st.stages.push(stg);
+  st.firstTs=ts;
+  recordStage(which, stg, dateKey(ts), c);
+  return stg;
 }
 // この回で実際にやった数を手入力（規定と違う日だけ使う）
 function editCount(which,i){
@@ -692,15 +710,16 @@ function markLimit(which){
   if(!state.manualRel) state.manualRel={like:null,follow:null};
   // 記録すると今日の回数が1回目に戻るので、進行中なら確認（ヘッダーの⏰の誤タップ対策）
   if(state[which].stages.length &&
-     !confirm(CFG[which].name+"解除の時間を今の時刻で記録します。\n今日の"+state[which].stages.length+"回分のカウントは1回目に戻ります。よろしいですか？")) return;
+     !confirm(CFG[which].name+"解除の時間を今の時刻で記録します。\n今日の"+state[which].stages.length+"回分のカウントは1回目に戻り、同じ時刻で1回目が始まります。よろしいですか？")) return;
   const markTs=Date.now();
   state.manualRel[which]={markTs, notified:false};
   const st=state[which];
   st.firstTs=null; st.stages=[]; st.ended=false;   // 記録した瞬間に1回目からの回数もリセット
+  startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
   askNotify(true);
   save(); render();
-  if(calEnabled) calManualRel(which);
-  toast(CFG[which].emoji+" "+CFG[which].name+"解除の時間を "+hm(markTs)+" で記録（翌日 "+hm(markTs+DAY)+" に通知）");
+  if(calEnabled){ calManualRel(which); registerStageAlarm(which, 0); }
+  toast(CFG[which].emoji+" 解除 "+hm(markTs)+" を記録＋1回目を同時刻でスタート（解除 "+hm(markTs+HOUR)+"／翌日 "+hm(markTs+DAY)+" に通知）");
 }
 function clearManualRel(which){
   if(!state.manualRel) return;
@@ -725,9 +744,22 @@ function editManualRel(which){
   if(h===nd.getHours() && mi===nd.getMinutes()) ts=now;
   if(now-ts>=DAY){ toast("その時刻はもう24時間以上前です。記録しませんでした"); return; }
   if(!state.manualRel) state.manualRel={like:null,follow:null};
+  const linked=linkedFirst(which,0);   // 直す前に連動していたか見ておく
   state.manualRel[which]={markTs:ts, notified:false};   // 通知は新しい時刻＋24時間で鳴り直す
+  const st=state[which];
+  let note="";
+  if(linked){                                   // 1回目も同じ時刻に付いてくる
+    const f=st.stages[0];
+    f.startTs=ts; f.releaseTs=ts+HOUR; f.notified=Date.now()>=f.releaseTs;
+    recordStage(which, f, dateKey(ts), countedOf(f));
+    st.firstTs=Math.min.apply(null, st.stages.map(x=>x.startTs));
+    note="＋1回目も同じ時刻に";
+  }else if(st.stages.length===0){                // 回がないなら同時刻で1回目を開始
+    startFirstAt(which, ts);
+    note="＋1回目を同時刻でスタート";
+  }
   save(); render();
-  toast(CFG[which].name+"解除の時間を "+relDayHm(ts)+" に修正（"+relDayHm(ts+DAY)+" に通知）");
+  toast(CFG[which].name+"解除の時間を "+relDayHm(ts)+" に修正"+note+"（"+relDayHm(ts+DAY)+" に通知）");
 }
 function calManualRel(which){
   const ts=manualNotifyTs(which);
