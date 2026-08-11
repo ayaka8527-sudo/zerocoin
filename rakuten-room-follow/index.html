@@ -185,11 +185,27 @@
         const items = (d.items || d).filter((x) => x && x.h);
         if (!items.length) throw new Error("中身がありません");
         S.items = items;
+        S.at = d.at || Date.now(); // いつMacが作ったリストか（新しいものだけ入れ替えるため）
         S.i = 0;
         S.skip = {}; // 新しいリストでは見送りも作り直す（済んだ人はMac側で外れている）
         save(S);
         render();
         return items.length;
+      }
+
+      // 開いたときに、Macが新しいリストを出していれば黙って入れ替える。
+      // ★これが無いと、一度読み込んだあとは「開いても何も起きない」ままになる
+      //   （2026-08-11 ユーザー報告）。中身が同じなら何もしない
+      async function refreshIfNewer() {
+        try {
+          const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+          if (!r.ok) return;
+          const d = await r.json();
+          if (!d || !Array.isArray(d.items) || !d.items.length) return;
+          if (S.at && d.at && d.at <= S.at) return; // 前と同じ（or 古い）なら触らない
+          applyList(d);
+          msg("新しいリスト（" + d.items.length + "人）に入れ替えました");
+        } catch (e) {}
       }
 
       $("#load-net").onclick = async () => {
@@ -229,8 +245,13 @@
       };
 
       render();
-      // 初回だけ、置いてあるリストを自動で読む
+      // 開くたびに、新しいリストが出ていないか見に行く（初回はそのまま読み込む）
       if (!S.items.length) $("#load-net").click();
+      else refreshIfNewer();
+      // ホーム画面アプリは閉じずに残るので、戻ってきたときにも見に行く
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshIfNewer();
+      });
     </script>
   </body>
 </html>
