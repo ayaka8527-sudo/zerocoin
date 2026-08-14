@@ -272,15 +272,15 @@
     <div class="fc-grid">
       <div class="fc-field">
         <span class="fc-label">フォロー数</span>
-        <div class="fc-inline"><input type="text" id="fgInput" class="fc-input" inputmode="decimal" placeholder="15.2"><span class="fc-unit">K</span></div>
+        <div class="fc-inline"><input type="text" id="fgInput" class="fc-input" inputmode="numeric" placeholder="15234" onfocus="this.value=this.value.replace(/,/g,'')"><span class="fc-unit">人</span></div>
       </div>
       <div class="fc-field">
         <span class="fc-label">フォロワー数</span>
-        <div class="fc-inline"><input type="text" id="fcInput" class="fc-input" inputmode="decimal" placeholder="17.3"><span class="fc-unit">K</span></div>
+        <div class="fc-inline"><input type="text" id="fcInput" class="fc-input" inputmode="numeric" placeholder="24109" onfocus="this.value=this.value.replace(/,/g,'')"><span class="fc-unit">人</span></div>
       </div>
     </div>
     <button class="fc-save-big" onclick="saveFollowerCount()">💾 保存する</button>
-    <div class="notice">千単位（K）で入力：17.3 → 17,300人。同じ日に入れ直すと上書き。推移はグラフカードで見られます。</div>
+    <div class="notice">実数で入力：24109（24,109 とカンマ入りでもOK）。17.3 のように小数で書くと今まで通りK扱い（＝17,300）。同じ日に入れ直すと上書き。推移はグラフカードで見られます。</div>
   </div>
 
   <!-- いいね -->
@@ -415,7 +415,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-12a（解除の時間＝1回目の開始時刻。記録すると同時刻で1回目が始まる）";
+const APP_VERSION="2026-08-15a（フォロワー/フォロー数を実数で入力・表示。グラフも実数）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1167,15 +1167,15 @@ function renderChart2(){
   let min=Math.min.apply(null, all.map(p=>p.y));
   let max=Math.max.apply(null, all.map(p=>p.y));
   if(min===max){ min-=100; max+=100; }
-  const padB=20,padT=10,padL=40,padR=10;
+  const padB=20,padT=10,padL=48,padR=10;   // 実数ラベル（24,109）が入る幅
   const chartH=H-padB-padT, chartW=W-padL-padR;
   const X=x=> padL + (chartRange<=1 ? chartW/2 : chartW*x/(chartRange-1));
   const Y=y=> padT + chartH*(1-(y-min)/(max-min));
   ctx.strokeStyle="#eee"; ctx.beginPath();
   ctx.moveTo(padL,H-padB); ctx.lineTo(W-padR,H-padB); ctx.stroke();
   ctx.fillStyle="#bbb"; ctx.font="9px sans-serif"; ctx.textAlign="left";
-  ctx.fillText(fmtK(max), 2, padT+8);
-  ctx.fillText(fmtK(min), 2, H-padB);
+  ctx.fillText(fmtNum(max), 2, padT+8);
+  ctx.fillText(fmtNum(min), 2, H-padB);
   ctx.textAlign="center";
   if(firstD) ctx.fillText((firstD.getMonth()+1)+"/"+firstD.getDate(), padL, H-6);
   if(lastD)  ctx.fillText((lastD.getMonth()+1)+"/"+lastD.getDate(), W-padR-10, H-6);
@@ -1184,23 +1184,24 @@ function renderChart2(){
     ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
     pts.forEach((p,i)=>{ i?ctx.lineTo(X(p.x),Y(p.y)):ctx.moveTo(X(p.x),Y(p.y)); });
     ctx.stroke();
-    // 点＋実数値ラベル（混み合う時は間引き。最新点は必ず表示）
     ctx.font="9px sans-serif"; ctx.textAlign="center"; ctx.lineJoin="round";
-    let lastLabelX=-999;
-    pts.forEach((p,i)=>{
-      const px=X(p.x), py=Y(p.y);
-      ctx.fillStyle=color; ctx.beginPath(); ctx.arc(px,py,2.5,0,7); ctx.fill();
-      const isLast=i===pts.length-1;
-      if(isLast || px-lastLabelX>=32){
-        lastLabelX=px;
-        const tx=Math.max(16, Math.min(W-16, px));
-        let ty=above ? py-6 : py+11;
-        ty=Math.max(padT+7, Math.min(H-padB-1, ty));
-        const label=fmtK(p.y);
-        ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeText(label,tx,ty);   // 白フチで見やすく
-        ctx.fillStyle=color; ctx.fillText(label,tx,ty);
-      }
+    pts.forEach(p=>{
+      ctx.fillStyle=color; ctx.beginPath(); ctx.arc(X(p.x),Y(p.y),2.5,0,7); ctx.fill();
     });
+    // 実数値ラベルは最新点から遡って間引く（最新は必ず出し、その手前は42px以上あいた点だけ）
+    let nextLabelX=Infinity;
+    for(let i=pts.length-1;i>=0;i--){
+      const p=pts[i], px=X(p.x);
+      if(nextLabelX-px<42) continue;   // 実数は桁が広いので間引きを広めに
+      nextLabelX=px;
+      const py=Y(p.y);
+      const tx=Math.max(20, Math.min(W-20, px));
+      let ty=above ? py-6 : py+11;
+      ty=Math.max(padT+7, Math.min(H-padB-1, ty));
+      const label=fmtNum(p.y);
+      ctx.lineWidth=3; ctx.strokeStyle="#fff"; ctx.strokeText(label,tx,ty);   // 白フチで見やすく
+      ctx.fillStyle=color; ctx.fillText(label,tx,ty);
+    }
   }
   line(fPts,"#8e44ad",true);    // フォロワーは点の上
   line(gPts,"#4a9be8",false);   // フォローは点の下
@@ -1236,8 +1237,8 @@ function renderCalendar(){
     if(fv!=null){
       fkeys.push(key);
       const fd=followerDelta(key);
-      fc=`<div class="cal-fc">👤${fmtK(fv)}`+
-         (fd!=null?`<span class="c-fcd ${fd>=0?"up":"down"}">${fmtKDelta(fd)}</span>`:``)+
+      fc=`<div class="cal-fc">👤${fmtNum(fv)}`+
+         (fd!=null?`<span class="c-fcd ${fd>=0?"up":"down"}">${fmtNumDelta(fd)}</span>`:``)+
          `</div>`;
     }
     c.innerHTML=`<div class="cal-day">${d}</div>${counts}${fc}`;
@@ -1249,7 +1250,7 @@ function renderCalendar(){
     const lastV=state.followers[fkeys[fkeys.length-1]];
     const base=prevFollowerVal(fkeys[0]);
     const net=lastV-(base!=null?base:firstV);
-    fcTotal=`　<span class="c-fc">👤${fmtKDelta(net)}</span>`;
+    fcTotal=`　<span class="c-fc">👤${fmtNumDelta(net)}</span>`;
   }
   document.getElementById("calTotal").innerHTML=
     `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`+fcTotal;
@@ -1270,18 +1271,14 @@ function followerDelta(key){
   const p=prevFollowerVal(key);
   return (v!=null && p!=null) ? v-p : null;
 }
-function fmtK(n){
-  const s=(Math.round(n/100)/10).toFixed(1).replace(/\.0$/,"");
-  return s+"K";
-}
-function fmtKDelta(d){
-  return (d<0?"-":"+")+fmtK(Math.abs(d));
-}
+function fmtNum(n){ return Math.round(n).toLocaleString("en-US"); }        // 24109 → 24,109
+function fmtNumDelta(d){ return (d<0?"-":"+")+fmtNum(Math.abs(d)); }
 function parseKInput(str){
   str=(str||"").trim()
     .replace(/[０-９]/g, c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))  // 全角数字→半角
-    .replace(/[．。，,]/g,".")                                             // 全角ピリオド等→.
-    .replace(/[kKｋＫ\s]/g,"");                                            // K表記や空白は除去
+    .replace(/[，,]/g,"")                                                  // 桁区切りのカンマは除去
+    .replace(/[．。]/g,".")                                                // 全角ピリオド→.
+    .replace(/[kKｋＫ人\s]/g,"");                                          // K表記・「人」・空白は除去
   return parseFloat(str);
 }
 function toRawCount(raw){ return raw<1000 ? Math.round(raw*1000) : Math.round(raw); }  // 1000未満はK入力
@@ -1289,21 +1286,21 @@ function saveFollowerCount(){
   const fRaw=parseKInput(document.getElementById("fcInput").value);
   const gRaw=parseKInput(document.getElementById("fgInput").value);
   const fOk=!isNaN(fRaw)&&fRaw>=0, gOk=!isNaN(gRaw)&&gRaw>=0;
-  if(!fOk && !gOk){ toast("フォロワー数かフォロー数を入力してください（例 17.3）"); return; }
+  if(!fOk && !gOk){ toast("フォロワー数かフォロー数を入力してください（例 24109）"); return; }
   const k=todayKey();
   let msg=[];
   if(fOk){
     const v=toRawCount(fRaw);
     state.followers[k]=v;
-    document.getElementById("fcInput").value=(Math.round(v/100)/10);
+    document.getElementById("fcInput").value=fmtNum(v);
     const d=followerDelta(k);
-    msg.push("フォロワー "+fmtK(v)+(d!=null?"（"+fmtKDelta(d)+"）":""));
+    msg.push("フォロワー "+fmtNum(v)+(d!=null?"（"+fmtNumDelta(d)+"）":""));
   }
   if(gOk){
     const v=toRawCount(gRaw);
     state.following[k]=v;
-    document.getElementById("fgInput").value=(Math.round(v/100)/10);
-    msg.push("フォロー "+fmtK(v));
+    document.getElementById("fgInput").value=fmtNum(v);
+    msg.push("フォロー "+fmtNum(v));
   }
   save(); render();
   toast("👤 記録：" + msg.join(" ／ "));
@@ -1313,7 +1310,7 @@ function renderFollowerCard(){
   // 入力途中の値を消さない：記録済みで空欄のときだけ埋める
   const fill=(id,v)=>{
     const inp=document.getElementById(id);
-    if(document.activeElement!==inp && v!=null && inp.value==="") inp.value=(Math.round(v/100)/10);
+    if(document.activeElement!==inp && v!=null && inp.value==="") inp.value=fmtNum(v);
   };
   fill("fcInput", state.followers[k]);
   fill("fgInput", state.following[k]);
@@ -1321,7 +1318,7 @@ function renderFollowerCard(){
   const badge=document.getElementById("fcDelta");
   if(v!=null){
     const d=followerDelta(k);
-    badge.textContent = d!=null ? "前日比 "+fmtKDelta(d) : fmtK(v)+" 記録済み";
+    badge.textContent = d!=null ? "前日比 "+fmtNumDelta(d) : fmtNum(v)+" 記録済み";
     badge.className = "badge "+((d!=null&&d<0)?"bad":"ok");
   }else{
     badge.textContent="未入力"; badge.className="badge warn";
