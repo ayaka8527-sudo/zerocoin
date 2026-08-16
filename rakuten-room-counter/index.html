@@ -459,7 +459,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-16b（解除ボタンを予定の時刻ぶん並べる・2回タップ／🔔の予定は押した瞬間に24時間後の通知を登録／🔕は記録だけ）";
+const APP_VERSION="2026-08-16c（解除ボタンは予定の時刻ぶん・2回タップ。どれを押しても24時間後の通知をその場で登録）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -775,15 +775,10 @@ function planOf(which){
     const prev=(p&&p.items)?p.items:[];
     const pressed=prev.filter(x=>x.pressedTs!=null).map(x=>hm(x.pressedTs));
     const times=pressed.length?pressed:prev.map(x=>x.hm);   // 押していない日は前の予定を持ち越す
-    // 通知するかどうかは前の日の設定を時刻ごとに引き継ぐ
-    const notifyOf={};
-    prev.forEach(x=>{ notifyOf[x.pressedTs!=null?hm(x.pressedTs):x.hm]=(x.notify!==false); });
-    p={ dayKey:tk, items:Array.from(new Set(times)).sort().map(t=>({id:newPlanId(), hm:t, pressedTs:null, cal:false, notify:notifyOf[t]!==false})) };
+    p={ dayKey:tk, items:Array.from(new Set(times)).sort().map(t=>({id:newPlanId(), hm:t, pressedTs:null, cal:false})) };
     state.relPlan[which]=p;
     save();
   }
-  // 通知の指定がない行は、いちばん早い予定だけ通知ありにしておく
-  p.items.forEach((it,i)=>{ if(it.notify==null) it.notify=(i===0); });
   return p;
 }
 function planPressedCount(which){ return planOf(which).items.filter(x=>x.pressedTs!=null).length; }
@@ -797,16 +792,9 @@ function planRecordPress(which, ts){
     if(d<bd){ bd=d; best=it; }
   });
   if(best && bd<=PLAN_TOL){ best.pressedTs=ts; return best; }
-  const it={id:newPlanId(), hm:hm(ts), pressedTs:ts, cal:false, notify:defaultNotify(p)};
+  const it={id:newPlanId(), hm:hm(ts), pressedTs:ts, cal:false};
   p.items.push(it); sortPlan(p);
   return it;
-}
-// 通知ありの予定がまだ1つも無いときだけ、新しい行を通知ありにする
-function defaultNotify(p){ return !p.items.some(x=>x.notify); }
-function planToggleNotify(which,id){
-  const it=planOf(which).items.find(x=>x.id===id); if(!it) return;
-  it.notify=!it.notify; it.cal=false; save(); render();
-  toast(it.hm+"："+(it.notify?"押した24時間後に通知します":"記録だけにしました（通知なし）"));
 }
 function nextPlanId(which){
   const it=planOf(which).items.find(x=>x.pressedTs==null);
@@ -817,7 +805,7 @@ function planAdd(which){
   if(!t){ toast("時刻の形式が読めませんでした（例 12:00）"); return; }
   const p=planOf(which);
   if(p.items.some(x=>x.hm===t)){ toast("その時刻はもう予定にあります"); return; }
-  p.items.push({id:newPlanId(), hm:t, pressedTs:null, cal:false, notify:defaultNotify(p)});
+  p.items.push({id:newPlanId(), hm:t, pressedTs:null, cal:false});
   sortPlan(p); save(); render();
   toast("予定に "+t+" を追加しました");
 }
@@ -844,12 +832,13 @@ function planCheck(which,id){
 function planRegisterAll(which){
   const p=planOf(which), now=Date.now(), cfg=CFG[which];
   let rows=[], tomorrow=false;
-  p.items.forEach(it=>{ const t=planTs(it.hm); if(it.notify && it.pressedTs==null && t>now) rows.push({it,t}); });
+  p.items.forEach(it=>{ const t=planTs(it.hm); if(it.pressedTs==null && t>now) rows.push({it,t}); });
   if(rows.length===0){
+    // 今日ぶんが全部すぎている（まだ押していない予定も含む）→ 明日の同じ時刻で登録する
     tomorrow=true;
-    p.items.forEach(it=>{ if(it.notify && it.pressedTs!=null) rows.push({it, t:it.pressedTs+DAY}); });
+    p.items.forEach(it=>{ rows.push({it, t:(it.pressedTs!=null ? it.pressedTs+DAY : planTs(it.hm)+DAY)}); });
   }
-  if(rows.length===0){ toast("登録する予定がありません（🔕の予定は通知しません）"); return; }
+  if(rows.length===0){ toast("先に「＋予定を追加」で時刻を入れてください"); return; }
   const evs=rows.map(r=>({
     uid:"rrc-plan-"+dateKey(r.t)+"-"+which+"-"+hm(r.t).replace(":","")+"@rakuten-room",
     title:`${cfg.emoji} ${cfg.name} 解除！また活動できます`,
@@ -888,15 +877,10 @@ function doMarkLimit(which, markTs, id){
   const isFirst = planPressedCount(which)===0;   // 今日まだ1度も解除を押していない
   let it = (id && id!=="__new__") ? planOf(which).items.find(x=>x.id===id) : null;
   if(it) it.pressedTs=markTs; else it=planRecordPress(which, markTs);
-  // 通知ありの予定は、押した瞬間に「24時間後」のアラームを出す（別途📅を押さなくていい）
-  let calNote="";
-  if(it.notify){
-    it.cal=true;
-    downloadICS(`${cfg.emoji} ${cfg.name} 解除！また活動できます`, markTs+DAY, "楽天ROOM 活動カウンター", "解除アラーム");
-    calNote="／📅 明日 "+hm(markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
-  }else{
-    calNote="／🔕 記録だけ（通知なし）";
-  }
+  // 押した瞬間に「24時間後」のアラームを出す（別途📅を押さなくていい）
+  it.cal=true;
+  downloadICS(`${cfg.emoji} ${cfg.name} 解除！また活動できます`, markTs+DAY, "楽天ROOM 活動カウンター", "解除アラーム");
+  const calNote="／📅 明日 "+hm(markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
   if(isFirst){
     state.manualRel[which]={markTs, notified:false};
     st.firstTs=null; st.stages=[]; st.ended=false;   // 今日の1回目からやり直し
@@ -997,7 +981,7 @@ function renderRelBtns(which){
       const a=(armedId===it.id), done=it.pressedTs!=null;
       const lbl = done ? `✅ ${it.hm} 押した`
         : a ? `⚠️ もう一度で ${it.hm}`
-        : `⏰ ${it.hm}の解除${it.notify?"":"🔕"}`;
+        : `⏰ ${it.hm}の解除`;
       h+=`<button class="rel-mark${a?" armed":""}${done?" pressed":""}"${done?" disabled":""} `+
          `onclick="markLimit('${which}','${it.id}')">${lbl}</button>`;
     });
@@ -1015,21 +999,19 @@ function renderRelPlan(which){
   }
   p.items.forEach(it=>{
     const t=planTs(it.hm), done=it.pressedTs!=null, miss=!done && now>t+PLAN_TOL;
-    const nt = it.notify ? "🔔 押した24時間後に通知" : "🔕 記録だけ";
     const sub = done
-      ? `押した ${hm(it.pressedTs)}`+(it.notify?` ・📅明日 ${hm(it.pressedTs)} に通知`:" ・🔕記録だけ")
-      : miss ? `未（${dur(now-t)}すぎ）・${nt}`
-      : `あと ${countdown(t-now)} ・${nt}${it.cal?"・📅登録済み":""}`;
+      ? `押した ${hm(it.pressedTs)} ・📅明日 ${hm(it.pressedTs)} に通知`
+      : miss ? `未（${dur(now-t)}すぎ）`
+      : `あと ${countdown(t-now)}${it.cal?" ・📅登録済み":""}`;
     h+=`<div class="plan-row ${done?"done":miss?"miss":""}">`+
        `<button class="chk" onclick="planCheck('${which}','${it.id}')" title="${done?"チェックを外す":"押したことにする"}">${done?"✅":miss?"⚠️":"⬜"}</button>`+
        `<span class="pt">${it.hm}</span>`+
        `<span class="ps">${sub}</span>`+
-       `<button class="mini-cal" onclick="planToggleNotify('${which}','${it.id}')" title="通知するかを切り替える">${it.notify?"🔔":"🔕"}</button>`+
        `<button class="mini-cal" onclick="planEdit('${which}','${it.id}')" title="時刻を直す">🕐</button>`+
        `<button class="mini-cal" onclick="planDel('${which}','${it.id}')" title="消す">✕</button>`+
        `</div>`;
   });
-  const pend=p.items.filter(it=>it.pressedTs==null && it.notify && planTs(it.hm)>now);
+  const pend=p.items.filter(it=>it.pressedTs==null && planTs(it.hm)>now);
   const regLbl = pend.length ? `📅 まとめて登録（${pend.length}件）` : `📅 明日ぶんを登録`;
   h+=`<div class="plan-btns">`+
      `<button onclick="planAdd('${which}')">＋ 予定を追加</button>`+
@@ -1057,7 +1039,7 @@ function renderCalAlert(){
   const now=Date.now(), parts=[];
   ["like","follow"].forEach(w=>{
     const cfg=CFG[w];
-    const un=planOf(w).items.filter(it=>it.notify && it.pressedTs==null && planTs(it.hm)>now && !it.cal);
+    const un=planOf(w).items.filter(it=>it.pressedTs==null && planTs(it.hm)>now && !it.cal);
     if(un.length) parts.push({txt:`${cfg.emoji}解除予定 ${un.map(x=>x.hm).join("・")}`, act:`planRegisterAll('${w}')`});
     const st=state[w], s=st.stages[st.stages.length-1];
     if(s && now<s.releaseTs && !s.cal && !s.calLater)
