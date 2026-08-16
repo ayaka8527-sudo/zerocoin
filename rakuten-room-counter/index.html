@@ -211,6 +211,40 @@
   .notif-banner{background:#fffbe6;border:1.5px solid #ffe08a;border-radius:12px;padding:11px;font-size:12.5px;
     display:flex;align-items:center;gap:10px;margin-bottom:14px}
   .notif-banner button{margin-left:auto;background:var(--rakuten);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .cal-alert{background:#fdecea;border:1.5px solid #f5b7b1;border-radius:12px;padding:11px 12px;
+    margin-bottom:14px;font-size:12.5px;font-weight:800;color:var(--bad);
+    display:flex;align-items:center;gap:10px;line-height:1.45}
+  .cal-alert button{margin-left:auto;background:var(--bad);color:#fff;border:none;border-radius:8px;
+    padding:9px 12px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .cal-alert button:active{transform:scale(.95)}
+  .plan-box{background:#f7f3fb;border:1.5px solid #e4d7f2;border-radius:12px;padding:10px;margin:0 0 10px}
+  .plan-head{font-size:12px;font-weight:800;color:#8e44ad;margin-bottom:7px}
+  .plan-row{display:flex;align-items:center;gap:5px;background:#fff;border-radius:9px;
+    padding:7px 8px;margin-bottom:5px}
+  .plan-row .chk{flex:none;width:20px;text-align:center;font-size:14px}
+  .plan-row .pt{flex:none;width:50px;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums}
+  .plan-row .ps{flex:1;min-width:0;font-size:11px;font-weight:700;color:var(--muted);line-height:1.3}
+  .plan-row.done{background:#eafaf0}
+  .plan-row.done .ps{color:var(--ok)}
+  .plan-row.miss{background:#fdecea}
+  .plan-row.miss .ps{color:var(--bad)}
+  .plan-row .mini-cal{margin-left:2px}
+  .plan-btns{display:flex;gap:6px;margin-top:6px}
+  .plan-btns button{flex:1;border:1.5px solid #d9c8ea;background:#fff;color:#8e44ad;border-radius:9px;
+    padding:9px 4px;font-size:12px;font-weight:800;cursor:pointer}
+  .plan-btns button:active{transform:scale(.96)}
+  .plan-btns button.reg{background:#8e44ad;color:#fff;border-color:#8e44ad}
+  .plan-empty{font-size:11px;color:var(--muted);line-height:1.6;padding:0 2px 4px}
+  .cal-nudge{background:#fff3e6;border:1.5px solid #ffd9a8;border-radius:12px;padding:10px;margin:0 0 10px}
+  .cal-nudge .cn-t{font-size:12.5px;font-weight:800;color:var(--warn);margin-bottom:8px;line-height:1.4}
+  .cal-nudge .cn-btns{display:flex;gap:6px}
+  .cal-nudge .cn-add{flex:1;border:none;border-radius:10px;background:var(--warn);color:#fff;
+    padding:12px 6px;font-size:13px;font-weight:800;cursor:pointer}
+  .cal-nudge .cn-add:active{transform:scale(.96)}
+  .cal-nudge .cn-later{flex:none;border:1.5px solid #e0d3d8;background:#fff;color:var(--muted);
+    border-radius:10px;padding:12px;font-size:12.5px;font-weight:800;cursor:pointer}
+  .rel-mark.armed{background:var(--bad)}
+  .rel-acts button.armed{background:var(--bad)}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#33272a;color:#fff;
     padding:12px 18px;border-radius:30px;font-size:13.5px;font-weight:700;opacity:0;transition:.3s;z-index:100;
     max-width:90%;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
@@ -235,7 +269,7 @@
         <div class="rel-line sub"><span class="rl-k">解除の時間</span><b id="markLike">未記録</b></div>
       </div>
       <div class="rel-acts">
-        <button onclick="markLimit('like')" title="今の時間で解除を記録">⏰</button>
+        <button id="likeHeadMark" onclick="markLimit('like')" title="今の時間で解除を記録（2回タップ）">⏰</button>
         <button onclick="calManualRel('like')" title="解除の時間をカレンダー登録">📅</button>
       </div>
     </div>
@@ -246,7 +280,7 @@
         <div class="rel-line sub"><span class="rl-k">解除の時間</span><b id="markFollow">未記録</b></div>
       </div>
       <div class="rel-acts">
-        <button onclick="markLimit('follow')" title="今の時間で解除を記録">⏰</button>
+        <button id="followHeadMark" onclick="markLimit('follow')" title="今の時間で解除を記録（2回タップ）">⏰</button>
         <button onclick="calManualRel('follow')" title="解除の時間をカレンダー登録">📅</button>
       </div>
     </div>
@@ -264,6 +298,8 @@
     🔔 解除のお知らせを受け取るには通知を許可してください
     <button onclick="askNotify()">許可する</button>
   </div>
+
+  <div class="cal-alert" id="calAlert" style="display:none"></div>
 
   <!-- フォロワー・フォロー数 -->
   <div class="card">
@@ -291,8 +327,10 @@
     <div class="rel-input">
       <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除（今の時間で記録）</button>
     </div>
+    <div class="plan-box" id="likeRelPlan"></div>
     <div id="likeRelInfo" style="display:none"></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
+    <div class="cal-nudge" id="likeCalNudge" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
     <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="likeHalfBtn" onclick="halfStage('like')" style="display:none">🌓 半分で終了</button>
@@ -314,8 +352,10 @@
     <div class="rel-input">
       <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">⏰ フォロー解除（今の時間で記録）</button>
     </div>
+    <div class="plan-box" id="followRelPlan"></div>
     <div id="followRelInfo" style="display:none"></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
+    <div class="cal-nudge" id="followCalNudge" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
     <button class="finish-btn" id="followFinishBtn" onclick="finishStage('follow')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="followHalfBtn" onclick="halfStage('follow')" style="display:none">🌓 半分で終了</button>
@@ -377,7 +417,12 @@
     <div class="card-head"><span class="emoji">📅</span><span class="title">カレンダー通知</span></div>
     <div class="notice">
       開始すると、各カードに <b>「📅 カレンダーに追加」</b> ボタンが出ます。タップ→「追加」を押すと解除時刻のアラームがカレンダーに入り、<b style="color:var(--rakuten)">アプリを閉じていても解除時刻に通知</b>が鳴ります。<br>
-      ※予定には<b>解除時刻ぴったりに鳴る通知が最初から入っています</b>（設定変更ふよう）。
+      ※予定には<b>解除時刻ぴったりに鳴る通知が最初から入っています</b>（設定変更ふよう）。<br>
+      <br>
+      <b style="color:var(--bad)">鳴らないときの確認</b><br>
+      ① <b>集中モードでカレンダー通知が消えます</b>。iPhoneの 設定 → 集中モード → 睡眠／おやすみモード → 「通知を許可」→ App → <b>カレンダー を追加</b>してください。朝7時台に鳴らない原因はほぼこれです。<br>
+      ② 未登録があると画面いちばん上に<b>赤いバナー</b>が出ます。出ているうちは鳴りません。<br>
+      ③ 「今日の解除予定」の <b>📅まとめて登録</b> なら、その日の解除ぶんが1タップで全部入ります。1時間ごとの解除は開始した時にしか分からないので、開始のたびに出るオレンジのうながしから追加してください。
     </div>
     <label class="cal-toggle">
       <input type="checkbox" id="calToggle" onchange="toggleCal(this)">
@@ -415,7 +460,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-15a（フォロワー/フォロー数を実数で入力・表示。グラフも実数）";
+const APP_VERSION="2026-08-16a（解除ボタンは2回タップ／今日の解除予定チェック表／未登録の赤バナー・まとめ.ics）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -429,6 +474,7 @@ function migrate(s){
   if(!s.drafts) s.drafts=[];
   if(!s.followers) s.followers={};
   if(!s.following) s.following={};
+  if(!s.relPlan) s.relPlan={like:null, follow:null};
   return s;
 }
 let state = migrate(load());
@@ -453,6 +499,7 @@ function blankState(){
     followers: {}, // dateKey -> フォロワー数
     following: {}, // dateKey -> フォロー数（自分がフォローしている数）
     manualRel: {like:null, follow:null},  // 手入力した今日の解除時刻 {key:dateKey, hm:"HH:MM"}
+    relPlan:   {like:null, follow:null},  // 今日の解除予定 {dayKey, items:[{id,hm,pressedTs,cal}]}
   };
 }
 function load(){
@@ -651,6 +698,8 @@ function halfStage(which){
 }
 let cancelArm={like:0,follow:0};
 const CANCEL_WINDOW=2500;
+let relArm={like:0,follow:0};       // 解除ボタンの2回タップ用（誤タップ防止）
+const REL_WINDOW=2500;
 function cancelLast(which){
   const st=state[which];
   if(st.stages.length===0){ toast("取り消す開始がありません"); return; }
@@ -706,20 +755,135 @@ function relDayHm(ts){
   const sameDay = d.getFullYear()===td.getFullYear() && d.getMonth()===td.getMonth() && d.getDate()===td.getDate();
   return (sameDay?"":(d.getMonth()+1)+"/"+d.getDate()+" ")+hm(ts);
 }
-function markLimit(which){
-  if(!state.manualRel) state.manualRel={like:null,follow:null};
-  // 記録すると今日の回数が1回目に戻るので、進行中なら確認（ヘッダーの⏰の誤タップ対策）
-  if(state[which].stages.length &&
-     !confirm(CFG[which].name+"解除の時間を今の時刻で記録します。\n今日の"+state[which].stages.length+"回分のカウントは1回目に戻り、同じ時刻で1回目が始まります。よろしいですか？")) return;
-  const markTs=Date.now();
-  state.manualRel[which]={markTs, notified:false};
-  const st=state[which];
-  st.firstTs=null; st.stages=[]; st.ended=false;   // 記録した瞬間に1回目からの回数もリセット
-  startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
-  askNotify(true);
+/* ---------- 今日の解除予定（何時に解除が来るか＝押したかのチェック表） ---------- */
+const PLAN_TOL=30*60000;   // 予定と実際が±30分ならその予定を押したものとみなす
+function newPlanId(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function parseHM(s){
+  const m=String(s).trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).match(/^(\d{1,2})[:：\s]?(\d{2})$/);
+  if(!m) return null;
+  const h=+m[1], mi=+m[2];
+  if(h>23||mi>59) return null;
+  return String(h).padStart(2,"0")+":"+String(mi).padStart(2,"0");
+}
+function planTs(hmStr){ const a=hmStr.split(":"); const d=new Date(); d.setHours(+a[0],+a[1],0,0); return d.getTime(); }
+function sortPlan(p){ p.items.sort((a,b)=>a.hm.localeCompare(b.hm)); }
+// 今日の予定を返す。日が変わっていたら「前回押した実時刻」を今日の予定として下書きし直す
+function planOf(which){
+  if(!state.relPlan) state.relPlan={like:null,follow:null};
+  const tk=todayKey();
+  let p=state.relPlan[which];
+  if(!p || p.dayKey!==tk){
+    const prev=(p&&p.items)?p.items:[];
+    const pressed=prev.filter(x=>x.pressedTs!=null).map(x=>hm(x.pressedTs));
+    const times=pressed.length?pressed:prev.map(x=>x.hm);   // 押していない日は前の予定を持ち越す
+    p={ dayKey:tk, items:Array.from(new Set(times)).sort().map(t=>({id:newPlanId(), hm:t, pressedTs:null, cal:false})) };
+    state.relPlan[which]=p;
+    save();
+  }
+  return p;
+}
+function planPressedCount(which){ return planOf(which).items.filter(x=>x.pressedTs!=null).length; }
+// 解除を押した時刻を、いちばん近い未チェックの予定に記録する（遠ければ新しい行として足す）
+function planRecordPress(which, ts){
+  const p=planOf(which);
+  let best=null, bd=Infinity;
+  p.items.forEach(it=>{
+    if(it.pressedTs!=null) return;
+    const d=Math.abs(planTs(it.hm)-ts);
+    if(d<bd){ bd=d; best=it; }
+  });
+  if(best && bd<=PLAN_TOL){ best.pressedTs=ts; return best; }
+  const it={id:newPlanId(), hm:hm(ts), pressedTs:ts, cal:false};
+  p.items.push(it); sortPlan(p);
+  return it;
+}
+function planAdd(which){
+  const t=parseHM(prompt("解除の予定時刻を入力（例 12:00）","12:00")||"");
+  if(!t){ toast("時刻の形式が読めませんでした（例 12:00）"); return; }
+  const p=planOf(which);
+  if(p.items.some(x=>x.hm===t)){ toast("その時刻はもう予定にあります"); return; }
+  p.items.push({id:newPlanId(), hm:t, pressedTs:null, cal:false});
+  sortPlan(p); save(); render();
+  toast("予定に "+t+" を追加しました");
+}
+function planEdit(which,id){
+  const p=planOf(which), it=p.items.find(x=>x.id===id); if(!it) return;
+  const t=parseHM(prompt("この予定の時刻（例 12:00）", it.hm)||"");
+  if(!t){ toast("時刻の形式が読めませんでした（例 12:00）"); return; }
+  it.hm=t; it.cal=false;   // 時刻が変わったらカレンダーは入れ直し
+  sortPlan(p); save(); render();
+  toast("予定を "+t+" に直しました（📅は入れ直してください）");
+}
+function planDel(which,id){
+  const p=planOf(which);
+  p.items=p.items.filter(x=>x.id!==id);
+  save(); render(); toast("予定を消しました");
+}
+function planCheck(which,id){
+  const it=planOf(which).items.find(x=>x.id===id); if(!it) return;
+  if(it.pressedTs!=null){ it.pressedTs=null; save(); render(); toast("チェックを外しました"); return; }
+  it.pressedTs=planTs(it.hm); save(); render();
+  toast(it.hm+" に押したことにしました（回数は変わりません）");
+}
+// 未到来の予定をまとめて1枚の.icsにする。今日ぶんが全部過ぎていたら明日の見込みを出す
+function planRegisterAll(which){
+  const p=planOf(which), now=Date.now(), cfg=CFG[which];
+  let rows=[], tomorrow=false;
+  p.items.forEach(it=>{ const t=planTs(it.hm); if(it.pressedTs==null && t>now) rows.push({it,t}); });
+  if(rows.length===0){
+    tomorrow=true;
+    p.items.forEach(it=>{ if(it.pressedTs!=null) rows.push({it, t:it.pressedTs+DAY}); });
+  }
+  if(rows.length===0){ toast("登録する予定がありません（＋予定を追加をどうぞ）"); return; }
+  const evs=rows.map(r=>({
+    uid:"rrc-plan-"+dateKey(r.t)+"-"+which+"-"+hm(r.t).replace(":","")+"@rakuten-room",
+    title:`${cfg.emoji} ${cfg.name} 解除！また活動できます`,
+    whenMs:r.t, desc:"楽天ROOM 活動カウンター（解除予定）"
+  }));
+  downloadICSMulti(evs, "解除予定");
+  if(!tomorrow) rows.forEach(r=>{ r.it.cal=true; });
   save(); render();
-  if(calEnabled){ calManualRel(which); registerStageAlarm(which, 0); }
-  toast(CFG[which].emoji+" 解除 "+hm(markTs)+" を記録＋1回目を同時刻でスタート（解除 "+hm(markTs+HOUR)+"／翌日 "+hm(markTs+DAY)+" に通知）");
+  toast("📅 "+(tomorrow?"明日":"今日")+"の解除 "+evs.length+"件をカレンダーに登録");
+}
+
+function markLimit(which){
+  const now=Date.now();
+  // セーフティ：1回目のタップでは記録せず、2.5秒以内にもう一度押されたときだけ実行する
+  if(now-relArm[which] >= REL_WINDOW){
+    relArm[which]=now;
+    const st=state[which];
+    toast(planPressedCount(which)>0
+      ? "もう一度タップで解除を記録（2回目・今日の回数はそのまま）"
+      : (st.stages.length
+          ? "もう一度タップで解除を記録（今日の"+st.stages.length+"回分は1回目に戻ります）"
+          : "もう一度タップで解除を記録（1回目がこの時刻で始まります）"));
+    render();
+    setTimeout(()=>{ if(Date.now()-relArm[which]>=REL_WINDOW){ relArm[which]=0; render(); } }, REL_WINDOW+100);
+    return;
+  }
+  relArm[which]=0;
+  doMarkLimit(which, now);
+}
+function doMarkLimit(which, markTs){
+  if(!state.manualRel) state.manualRel={like:null,follow:null};
+  const st=state[which];
+  const isFirst = planPressedCount(which)===0;   // 今日まだ1度も解除を押していない
+  planRecordPress(which, markTs);
+  if(isFirst){
+    state.manualRel[which]={markTs, notified:false};
+    st.firstTs=null; st.stages=[]; st.ended=false;   // 今日の1回目からやり直し
+    startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
+    askNotify(true);
+    save(); render();
+    if(calEnabled){ calManualRel(which); registerStageAlarm(which, 0); }
+    toast(CFG[which].emoji+" 解除 "+hm(markTs)+" を記録＋1回目を同時刻でスタート（解除 "+hm(markTs+HOUR)+"／翌日 "+hm(markTs+DAY)+" に通知）");
+  }else{
+    // 2回目以降：回数はリセットしない。解除が来た記録だけ残す（明日の予定はこの時刻から作られる）
+    if(!state.manualRel[which]) state.manualRel[which]={markTs, notified:false};
+    askNotify(true);
+    save(); render();
+    toast(CFG[which].emoji+" 解除 "+hm(markTs)+" を記録（回数はそのまま／次の回は「開始」を押してください）");
+  }
 }
 function clearManualRel(which){
   if(!state.manualRel) return;
@@ -789,6 +953,70 @@ function renderManualRel(which){
     `</div>`;
 }
 
+/* ---------- 今日の解除予定の描画 ---------- */
+function renderRelPlan(which){
+  const box=document.getElementById(which+"RelPlan");
+  if(!box) return;
+  const cfg=CFG[which], p=planOf(which), now=Date.now();
+  sortPlan(p);
+  let h=`<div class="plan-head">📋 今日の${cfg.name}解除予定（押したかチェック）</div>`;
+  if(p.items.length===0){
+    h+=`<div class="plan-empty">まだ予定がありません。⏰で解除を記録すると、明日の予定に同じ時刻が自動で入ります。今すぐ入れるなら「＋予定を追加」。</div>`;
+  }
+  p.items.forEach(it=>{
+    const t=planTs(it.hm), done=it.pressedTs!=null, miss=!done && now>t+PLAN_TOL;
+    const sub = done ? `押した ${hm(it.pressedTs)}`
+      : miss ? `未（${dur(now-t)}すぎ）`
+      : `あと ${countdown(t-now)}${it.cal?" ・📅登録済み":""}`;
+    h+=`<div class="plan-row ${done?"done":miss?"miss":""}">`+
+       `<span class="chk">${done?"✅":miss?"⚠️":"⬜"}</span>`+
+       `<span class="pt">${it.hm}</span>`+
+       `<span class="ps">${sub}</span>`+
+       `<button class="mini-cal" onclick="planCheck('${which}','${it.id}')" title="${done?"チェックを外す":"押したことにする"}">${done?"↩︎":"✓"}</button>`+
+       `<button class="mini-cal" onclick="planEdit('${which}','${it.id}')" title="時刻を直す">🕐</button>`+
+       `<button class="mini-cal" onclick="planDel('${which}','${it.id}')" title="消す">✕</button>`+
+       `</div>`;
+  });
+  const pend=p.items.filter(it=>it.pressedTs==null && planTs(it.hm)>now);
+  const regLbl = pend.length ? `📅 まとめて登録（${pend.length}件）` : `📅 明日ぶんを登録`;
+  h+=`<div class="plan-btns">`+
+     `<button onclick="planAdd('${which}')">＋ 予定を追加</button>`+
+     `<button class="reg" onclick="planRegisterAll('${which}')">${regLbl}</button>`+
+     `</div>`;
+  box.innerHTML=h;
+}
+// 実施中なのにカレンダー未登録のとき、追加するまで消えないうながし
+function renderCalNudge(which){
+  const el=document.getElementById(which+"CalNudge");
+  if(!el) return;
+  const st=state[which], now=Date.now(), s=st.stages[st.stages.length-1];
+  if(!s || now>=s.releaseTs || s.cal || s.calLater){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="block";
+  el.innerHTML=`<div class="cn-t">⏰ ${hm(s.releaseTs)} の解除がカレンダー未登録です（このままだとアプリを閉じている間は鳴りません）</div>`+
+    `<div class="cn-btns">`+
+    `<button class="cn-add" onclick="reRegisterStage('${which}',${st.stages.length-1})">📅 カレンダーに追加</button>`+
+    `<button class="cn-later" onclick="calLater('${which}')">あとで</button>`+
+    `</div>`;
+}
+// 最上部の赤バナー（未登録が1つでもあれば出す）
+function renderCalAlert(){
+  const el=document.getElementById("calAlert");
+  if(!el) return;
+  const now=Date.now(), parts=[];
+  ["like","follow"].forEach(w=>{
+    const cfg=CFG[w];
+    const un=planOf(w).items.filter(it=>it.pressedTs==null && planTs(it.hm)>now && !it.cal);
+    if(un.length) parts.push({txt:`${cfg.emoji}解除予定 ${un.map(x=>x.hm).join("・")}`, act:`planRegisterAll('${w}')`});
+    const st=state[w], s=st.stages[st.stages.length-1];
+    if(s && now<s.releaseTs && !s.cal && !s.calLater)
+      parts.push({txt:`${cfg.emoji}${hm(s.releaseTs)}の解除`, act:`reRegisterStage('${w}',${st.stages.length-1})`});
+  });
+  if(parts.length===0){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="flex";
+  el.innerHTML=`<span>⏰ カレンダー未登録：${parts.map(x=>x.txt).join(" ／ ")}</span>`+
+    `<button onclick="${parts[0].act}">📅 登録</button>`;
+}
+
 /* ---------- カレンダー連携（閉じてても通知） ---------- */
 let calEnabled = localStorage.getItem("rrc_cal")==="on";
 function icsTime(ms){
@@ -805,6 +1033,25 @@ function makeICS(title,whenMs,desc){
     "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:-PT0M","REPEAT:3","DURATION:PT5M","END:VALARM",
     "END:VEVENT","END:VCALENDAR"
   ].join("\r\n");
+}
+// 複数の予定を1枚にまとめた.ics（朝1タップでその日の解除通知が全部入る）
+function makeICSMulti(evs){
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//RakutenRoomCounter//JP","CALSCALE:GREGORIAN","METHOD:PUBLISH"];
+  evs.forEach(e=>{
+    L.push("BEGIN:VEVENT","UID:"+e.uid,"DTSTAMP:"+icsTime(Date.now()),
+      "DTSTART:"+icsTime(e.whenMs),"DTEND:"+icsTime(e.whenMs+5*60000),
+      "SUMMARY:"+e.title,"DESCRIPTION:"+(e.desc||"楽天ROOM 活動カウンター"),
+      "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+e.title,"TRIGGER:-PT0M","END:VALARM","END:VEVENT");
+  });
+  L.push("END:VCALENDAR");
+  return L.join("\r\n");
+}
+function downloadICSMulti(evs,fname){
+  const url=URL.createObjectURL(new Blob([makeICSMulti(evs)],{type:"text/calendar;charset=utf-8"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=(fname||"解除予定")+".ics";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 function isIOS(){
   return /iP(hone|ad|od)/.test(navigator.userAgent) ||
@@ -838,6 +1085,7 @@ function alarmTitleFor(which,i){
 }
 function registerStageAlarm(which,i){
   const cfg=CFG[which], s=state[which].stages[i];
+  s.cal=true; s.calLater=false; save();   // この回は登録済み（未登録バナーを消す）
   // 規定の最終回（いいね3回目／フォロー8回目）は、次に開始できるのが「解除の時間」なのでそちらを登録
   if(isLastStd(which,i)){
     const rt=resetTsOf(which);
@@ -849,6 +1097,12 @@ function registerStageAlarm(which,i){
   }
   downloadICS(alarmTitleFor(which,i), s.releaseTs, "楽天ROOM 活動カウンター", "解除アラーム");
   toast("📅 解除アラームをカレンダーに登録");
+}
+function calLater(which){
+  const st=state[which], s=st.stages[st.stages.length-1];
+  if(!s) return;
+  s.calLater=true; save(); render();
+  toast("あとでにしました（うながしを消します）");
 }
 function reRegisterStage(which,i){ registerStageAlarm(which,i); }
 function registerReset(which){
@@ -934,8 +1188,11 @@ function render(){
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
   renderManualRel("like"); renderManualRel("follow");
+  renderRelPlan("like"); renderRelPlan("follow");
+  renderCalNudge("like"); renderCalNudge("follow");
   renderToday(); renderChart2(); renderCalendar(); renderFollowerCard(); updateNotifBanner();
   renderRelSummary("like"); renderRelSummary("follow");
+  renderCalAlert();
   document.getElementById("appVer").textContent=APP_VERSION;
 }
 // 固定ヘッダー1行目：いまの状態（ラベル＋時刻）
@@ -1063,6 +1320,16 @@ function renderLimiter(which){
   else if(spUsed){ sp.disabled=true; sp.textContent="予備：使用済み"; }
   else if(waiting){ sp.disabled=true; sp.textContent="＋予備（待機中）"; }
   else{ sp.disabled=false; sp.textContent=`＋予備で開始（${cfg.spareCap}）`; }
+  // 解除ボタン（2回タップの武装状態をカード内とヘッダーで共有）
+  const relArmed = now-relArm[which] < REL_WINDOW;
+  const rm=document.getElementById(which+"RelMark");
+  if(rm){
+    rm.textContent = relArmed ? "⚠️ もう一度タップで記録する" : `⏰ ${cfg.name}解除（今の時間で記録）`;
+    rm.classList.toggle("armed", relArmed);
+  }
+  const hm2=document.getElementById(which+"HeadMark");
+  if(hm2) hm2.classList.toggle("armed", relArmed);
+
   const cb=document.getElementById(which+"CancelBtn");
   cb.disabled = st.stages.length===0;
   if(st.stages.length>0 && Date.now()-cancelArm[which] < CANCEL_WINDOW){
