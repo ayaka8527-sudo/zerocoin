@@ -74,7 +74,7 @@
   .release-banner .nextline{display:block;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,.15);font-size:13px;font-weight:700}
   .release-banner.wait{background:#fff3e6;color:var(--warn)}
   .release-banner.done{background:#fdecea;color:var(--bad)}
-  .rel-input{display:flex;align-items:center;gap:7px;margin:0 0 8px;background:#fff7fa;
+  .rel-input{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 8px;background:#fff7fa;
     border:1.5px solid #ffd6e2;border-radius:12px;padding:8px 10px}
   .rel-input-lbl{font-size:12.5px;font-weight:800;color:#7a6b70;white-space:nowrap}
   .rel-time-input{flex:1;min-width:0;width:100%;border:1.5px solid #e0d3d8;border-radius:9px;
@@ -244,7 +244,10 @@
   .cal-nudge .cn-later{flex:none;border:1.5px solid #e0d3d8;background:#fff;color:var(--muted);
     border-radius:10px;padding:12px;font-size:12.5px;font-weight:800;cursor:pointer}
   .rel-mark.armed{background:var(--bad)}
+  .rel-mark.pressed{background:#eafaf0;color:var(--ok);opacity:1}
+  .rel-mark:disabled{cursor:default}
   .rel-acts button.armed{background:var(--bad)}
+  .plan-row .chk{border:none;background:transparent;padding:0;cursor:pointer}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#33272a;color:#fff;
     padding:12px 18px;border-radius:30px;font-size:13.5px;font-weight:700;opacity:0;transition:.3s;z-index:100;
     max-width:90%;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
@@ -324,9 +327,7 @@
     <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
     <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋200＋300＝800）</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
-    <div class="rel-input">
-      <button class="rel-mark" id="likeRelMark" onclick="markLimit('like')">⏰ いいね解除（今の時間で記録）</button>
-    </div>
+    <div class="rel-input" id="likeRelBtns"></div>
     <div class="plan-box" id="likeRelPlan"></div>
     <div id="likeRelInfo" style="display:none"></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
@@ -349,9 +350,7 @@
     <div class="card-head"><span class="emoji">👥</span><span class="title">フォロー</span><span class="badge" id="followBadge"></span></div>
     <div class="progress-num"><b id="followDone">0</b> / 8 回　（100×8＝800）</div>
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
-    <div class="rel-input">
-      <button class="rel-mark" id="followRelMark" onclick="markLimit('follow')">⏰ フォロー解除（今の時間で記録）</button>
-    </div>
+    <div class="rel-input" id="followRelBtns"></div>
     <div class="plan-box" id="followRelPlan"></div>
     <div id="followRelInfo" style="display:none"></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
@@ -460,7 +459,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-16a（解除ボタンは2回タップ／今日の解除予定チェック表／未登録の赤バナー・まとめ.ics）";
+const APP_VERSION="2026-08-16b（解除ボタンを予定の時刻ぶん並べる・2回タップ／🔔の予定は押した瞬間に24時間後の通知を登録／🔕は記録だけ）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -698,7 +697,7 @@ function halfStage(which){
 }
 let cancelArm={like:0,follow:0};
 const CANCEL_WINDOW=2500;
-let relArm={like:0,follow:0};       // 解除ボタンの2回タップ用（誤タップ防止）
+let relArm={like:{id:null,ts:0}, follow:{id:null,ts:0}};   // 解除ボタンの2回タップ用（誤タップ防止）
 const REL_WINDOW=2500;
 function cancelLast(which){
   const st=state[which];
@@ -776,10 +775,15 @@ function planOf(which){
     const prev=(p&&p.items)?p.items:[];
     const pressed=prev.filter(x=>x.pressedTs!=null).map(x=>hm(x.pressedTs));
     const times=pressed.length?pressed:prev.map(x=>x.hm);   // 押していない日は前の予定を持ち越す
-    p={ dayKey:tk, items:Array.from(new Set(times)).sort().map(t=>({id:newPlanId(), hm:t, pressedTs:null, cal:false})) };
+    // 通知するかどうかは前の日の設定を時刻ごとに引き継ぐ
+    const notifyOf={};
+    prev.forEach(x=>{ notifyOf[x.pressedTs!=null?hm(x.pressedTs):x.hm]=(x.notify!==false); });
+    p={ dayKey:tk, items:Array.from(new Set(times)).sort().map(t=>({id:newPlanId(), hm:t, pressedTs:null, cal:false, notify:notifyOf[t]!==false})) };
     state.relPlan[which]=p;
     save();
   }
+  // 通知の指定がない行は、いちばん早い予定だけ通知ありにしておく
+  p.items.forEach((it,i)=>{ if(it.notify==null) it.notify=(i===0); });
   return p;
 }
 function planPressedCount(which){ return planOf(which).items.filter(x=>x.pressedTs!=null).length; }
@@ -793,16 +797,27 @@ function planRecordPress(which, ts){
     if(d<bd){ bd=d; best=it; }
   });
   if(best && bd<=PLAN_TOL){ best.pressedTs=ts; return best; }
-  const it={id:newPlanId(), hm:hm(ts), pressedTs:ts, cal:false};
+  const it={id:newPlanId(), hm:hm(ts), pressedTs:ts, cal:false, notify:defaultNotify(p)};
   p.items.push(it); sortPlan(p);
   return it;
+}
+// 通知ありの予定がまだ1つも無いときだけ、新しい行を通知ありにする
+function defaultNotify(p){ return !p.items.some(x=>x.notify); }
+function planToggleNotify(which,id){
+  const it=planOf(which).items.find(x=>x.id===id); if(!it) return;
+  it.notify=!it.notify; it.cal=false; save(); render();
+  toast(it.hm+"："+(it.notify?"押した24時間後に通知します":"記録だけにしました（通知なし）"));
+}
+function nextPlanId(which){
+  const it=planOf(which).items.find(x=>x.pressedTs==null);
+  return it?it.id:"__new__";
 }
 function planAdd(which){
   const t=parseHM(prompt("解除の予定時刻を入力（例 12:00）","12:00")||"");
   if(!t){ toast("時刻の形式が読めませんでした（例 12:00）"); return; }
   const p=planOf(which);
   if(p.items.some(x=>x.hm===t)){ toast("その時刻はもう予定にあります"); return; }
-  p.items.push({id:newPlanId(), hm:t, pressedTs:null, cal:false});
+  p.items.push({id:newPlanId(), hm:t, pressedTs:null, cal:false, notify:defaultNotify(p)});
   sortPlan(p); save(); render();
   toast("予定に "+t+" を追加しました");
 }
@@ -829,12 +844,12 @@ function planCheck(which,id){
 function planRegisterAll(which){
   const p=planOf(which), now=Date.now(), cfg=CFG[which];
   let rows=[], tomorrow=false;
-  p.items.forEach(it=>{ const t=planTs(it.hm); if(it.pressedTs==null && t>now) rows.push({it,t}); });
+  p.items.forEach(it=>{ const t=planTs(it.hm); if(it.notify && it.pressedTs==null && t>now) rows.push({it,t}); });
   if(rows.length===0){
     tomorrow=true;
-    p.items.forEach(it=>{ if(it.pressedTs!=null) rows.push({it, t:it.pressedTs+DAY}); });
+    p.items.forEach(it=>{ if(it.notify && it.pressedTs!=null) rows.push({it, t:it.pressedTs+DAY}); });
   }
-  if(rows.length===0){ toast("登録する予定がありません（＋予定を追加をどうぞ）"); return; }
+  if(rows.length===0){ toast("登録する予定がありません（🔕の予定は通知しません）"); return; }
   const evs=rows.map(r=>({
     uid:"rrc-plan-"+dateKey(r.t)+"-"+which+"-"+hm(r.t).replace(":","")+"@rakuten-room",
     title:`${cfg.emoji} ${cfg.name} 解除！また活動できます`,
@@ -846,43 +861,55 @@ function planRegisterAll(which){
   toast("📅 "+(tomorrow?"明日":"今日")+"の解除 "+evs.length+"件をカレンダーに登録");
 }
 
-function markLimit(which){
-  const now=Date.now();
-  // セーフティ：1回目のタップでは記録せず、2.5秒以内にもう一度押されたときだけ実行する
-  if(now-relArm[which] >= REL_WINDOW){
-    relArm[which]=now;
-    const st=state[which];
+// 解除ボタン。idは押した予定の行（ヘッダーの⏰など指定なしなら次の未チェックの予定）
+function markLimit(which,id){
+  const now=Date.now(), arm=relArm[which];
+  if(!id) id=nextPlanId(which);
+  // セーフティ：1回目のタップでは記録せず、2.5秒以内に同じボタンをもう一度押されたときだけ実行する
+  if(!(arm.id===id && now-arm.ts<REL_WINDOW)){
+    relArm[which]={id, ts:now};
+    const st=state[which], it=planOf(which).items.find(x=>x.id===id);
+    const at=it?it.hm+"の解除を":"解除を";
     toast(planPressedCount(which)>0
-      ? "もう一度タップで解除を記録（2回目・今日の回数はそのまま）"
+      ? "もう一度タップで"+at+"記録（今日の回数はそのまま）"
       : (st.stages.length
-          ? "もう一度タップで解除を記録（今日の"+st.stages.length+"回分は1回目に戻ります）"
-          : "もう一度タップで解除を記録（1回目がこの時刻で始まります）"));
+          ? "もう一度タップで"+at+"記録（今日の"+st.stages.length+"回分は1回目に戻ります）"
+          : "もう一度タップで"+at+"記録（1回目がこの時刻で始まります）"));
     render();
-    setTimeout(()=>{ if(Date.now()-relArm[which]>=REL_WINDOW){ relArm[which]=0; render(); } }, REL_WINDOW+100);
+    setTimeout(()=>{ if(Date.now()-relArm[which].ts>=REL_WINDOW){ relArm[which]={id:null,ts:0}; render(); } }, REL_WINDOW+100);
     return;
   }
-  relArm[which]=0;
-  doMarkLimit(which, now);
+  relArm[which]={id:null, ts:0};
+  doMarkLimit(which, now, id);
 }
-function doMarkLimit(which, markTs){
+function doMarkLimit(which, markTs, id){
   if(!state.manualRel) state.manualRel={like:null,follow:null};
-  const st=state[which];
+  const cfg=CFG[which], st=state[which];
   const isFirst = planPressedCount(which)===0;   // 今日まだ1度も解除を押していない
-  planRecordPress(which, markTs);
+  let it = (id && id!=="__new__") ? planOf(which).items.find(x=>x.id===id) : null;
+  if(it) it.pressedTs=markTs; else it=planRecordPress(which, markTs);
+  // 通知ありの予定は、押した瞬間に「24時間後」のアラームを出す（別途📅を押さなくていい）
+  let calNote="";
+  if(it.notify){
+    it.cal=true;
+    downloadICS(`${cfg.emoji} ${cfg.name} 解除！また活動できます`, markTs+DAY, "楽天ROOM 活動カウンター", "解除アラーム");
+    calNote="／📅 明日 "+hm(markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
+  }else{
+    calNote="／🔕 記録だけ（通知なし）";
+  }
   if(isFirst){
     state.manualRel[which]={markTs, notified:false};
     st.firstTs=null; st.stages=[]; st.ended=false;   // 今日の1回目からやり直し
     startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
     askNotify(true);
     save(); render();
-    if(calEnabled){ calManualRel(which); registerStageAlarm(which, 0); }
-    toast(CFG[which].emoji+" 解除 "+hm(markTs)+" を記録＋1回目を同時刻でスタート（解除 "+hm(markTs+HOUR)+"／翌日 "+hm(markTs+DAY)+" に通知）");
+    toast(cfg.emoji+" 解除 "+hm(markTs)+" を記録＋1回目を同時刻でスタート"+calNote);
   }else{
     // 2回目以降：回数はリセットしない。解除が来た記録だけ残す（明日の予定はこの時刻から作られる）
     if(!state.manualRel[which]) state.manualRel[which]={markTs, notified:false};
     askNotify(true);
     save(); render();
-    toast(CFG[which].emoji+" 解除 "+hm(markTs)+" を記録（回数はそのまま／次の回は「開始」を押してください）");
+    toast(cfg.emoji+" 解除 "+hm(markTs)+" を記録（回数はそのまま）"+calNote);
   }
 }
 function clearManualRel(which){
@@ -954,6 +981,29 @@ function renderManualRel(which){
 }
 
 /* ---------- 今日の解除予定の描画 ---------- */
+// 解除ボタンは予定の時刻ぶんだけ並べる（例：⏰7:15の解除／⏰12:00の解除）
+function renderRelBtns(which){
+  const box=document.getElementById(which+"RelBtns");
+  if(!box) return;
+  const cfg=CFG[which], p=planOf(which), arm=relArm[which];
+  const armedId=(Date.now()-arm.ts<REL_WINDOW)?arm.id:null;
+  let h="";
+  if(p.items.length===0){
+    const a=(armedId==="__new__");
+    h=`<button class="rel-mark${a?" armed":""}" onclick="markLimit('${which}','__new__')">`+
+      (a?"⚠️ もう一度タップで記録する":`⏰ ${cfg.name}解除（今の時間で記録）`)+`</button>`;
+  }else{
+    p.items.forEach(it=>{
+      const a=(armedId===it.id), done=it.pressedTs!=null;
+      const lbl = done ? `✅ ${it.hm} 押した`
+        : a ? `⚠️ もう一度で ${it.hm}`
+        : `⏰ ${it.hm}の解除${it.notify?"":"🔕"}`;
+      h+=`<button class="rel-mark${a?" armed":""}${done?" pressed":""}"${done?" disabled":""} `+
+         `onclick="markLimit('${which}','${it.id}')">${lbl}</button>`;
+    });
+  }
+  box.innerHTML=h;
+}
 function renderRelPlan(which){
   const box=document.getElementById(which+"RelPlan");
   if(!box) return;
@@ -965,19 +1015,21 @@ function renderRelPlan(which){
   }
   p.items.forEach(it=>{
     const t=planTs(it.hm), done=it.pressedTs!=null, miss=!done && now>t+PLAN_TOL;
-    const sub = done ? `押した ${hm(it.pressedTs)}`
-      : miss ? `未（${dur(now-t)}すぎ）`
-      : `あと ${countdown(t-now)}${it.cal?" ・📅登録済み":""}`;
+    const nt = it.notify ? "🔔 押した24時間後に通知" : "🔕 記録だけ";
+    const sub = done
+      ? `押した ${hm(it.pressedTs)}`+(it.notify?` ・📅明日 ${hm(it.pressedTs)} に通知`:" ・🔕記録だけ")
+      : miss ? `未（${dur(now-t)}すぎ）・${nt}`
+      : `あと ${countdown(t-now)} ・${nt}${it.cal?"・📅登録済み":""}`;
     h+=`<div class="plan-row ${done?"done":miss?"miss":""}">`+
-       `<span class="chk">${done?"✅":miss?"⚠️":"⬜"}</span>`+
+       `<button class="chk" onclick="planCheck('${which}','${it.id}')" title="${done?"チェックを外す":"押したことにする"}">${done?"✅":miss?"⚠️":"⬜"}</button>`+
        `<span class="pt">${it.hm}</span>`+
        `<span class="ps">${sub}</span>`+
-       `<button class="mini-cal" onclick="planCheck('${which}','${it.id}')" title="${done?"チェックを外す":"押したことにする"}">${done?"↩︎":"✓"}</button>`+
+       `<button class="mini-cal" onclick="planToggleNotify('${which}','${it.id}')" title="通知するかを切り替える">${it.notify?"🔔":"🔕"}</button>`+
        `<button class="mini-cal" onclick="planEdit('${which}','${it.id}')" title="時刻を直す">🕐</button>`+
        `<button class="mini-cal" onclick="planDel('${which}','${it.id}')" title="消す">✕</button>`+
        `</div>`;
   });
-  const pend=p.items.filter(it=>it.pressedTs==null && planTs(it.hm)>now);
+  const pend=p.items.filter(it=>it.pressedTs==null && it.notify && planTs(it.hm)>now);
   const regLbl = pend.length ? `📅 まとめて登録（${pend.length}件）` : `📅 明日ぶんを登録`;
   h+=`<div class="plan-btns">`+
      `<button onclick="planAdd('${which}')">＋ 予定を追加</button>`+
@@ -1005,7 +1057,7 @@ function renderCalAlert(){
   const now=Date.now(), parts=[];
   ["like","follow"].forEach(w=>{
     const cfg=CFG[w];
-    const un=planOf(w).items.filter(it=>it.pressedTs==null && planTs(it.hm)>now && !it.cal);
+    const un=planOf(w).items.filter(it=>it.notify && it.pressedTs==null && planTs(it.hm)>now && !it.cal);
     if(un.length) parts.push({txt:`${cfg.emoji}解除予定 ${un.map(x=>x.hm).join("・")}`, act:`planRegisterAll('${w}')`});
     const st=state[w], s=st.stages[st.stages.length-1];
     if(s && now<s.releaseTs && !s.cal && !s.calLater)
@@ -1188,6 +1240,7 @@ function render(){
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
   renderManualRel("like"); renderManualRel("follow");
+  renderRelBtns("like"); renderRelBtns("follow");
   renderRelPlan("like"); renderRelPlan("follow");
   renderCalNudge("like"); renderCalNudge("follow");
   renderToday(); renderChart2(); renderCalendar(); renderFollowerCard(); updateNotifBanner();
@@ -1320,15 +1373,9 @@ function renderLimiter(which){
   else if(spUsed){ sp.disabled=true; sp.textContent="予備：使用済み"; }
   else if(waiting){ sp.disabled=true; sp.textContent="＋予備（待機中）"; }
   else{ sp.disabled=false; sp.textContent=`＋予備で開始（${cfg.spareCap}）`; }
-  // 解除ボタン（2回タップの武装状態をカード内とヘッダーで共有）
-  const relArmed = now-relArm[which] < REL_WINDOW;
-  const rm=document.getElementById(which+"RelMark");
-  if(rm){
-    rm.textContent = relArmed ? "⚠️ もう一度タップで記録する" : `⏰ ${cfg.name}解除（今の時間で記録）`;
-    rm.classList.toggle("armed", relArmed);
-  }
+  // ヘッダーの⏰も2回タップの武装状態を共有（ボタン本体は renderRelBtns が描く）
   const hm2=document.getElementById(which+"HeadMark");
-  if(hm2) hm2.classList.toggle("armed", relArmed);
+  if(hm2) hm2.classList.toggle("armed", now-relArm[which].ts < REL_WINDOW);
 
   const cb=document.getElementById(which+"CancelBtn");
   cb.disabled = st.stages.length===0;
