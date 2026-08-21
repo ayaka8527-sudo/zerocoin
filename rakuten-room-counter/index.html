@@ -459,7 +459,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-21（次の開始が「1/1 9:00」になる不具合を修正：開始が無ければ終了扱いにしない）";
+const APP_VERSION="2026-08-21b（次の開始が「1/1 9:00」になる不具合を修正。次に開始できる時間に日付を表示）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1391,7 +1391,7 @@ function renderLimiter(which){
     statusEl.className="status-line done";
     statusEl.innerHTML=
       `${heading}<br>`+
-      `🔁 次に開始できる時間：<b>${hm(resetTs)}</b>（あと${countdown(resetTs-now)}）<br>`+
+      `🔁 次に開始できる時間：<b>${relDayHm(resetTs)}</b>（あと${countdown(resetTs-now)}）<br>`+
       `▶️ その時間になると「1回目」から再開できます`+
       ((!spUsed && !st.ended)?`<br><span style="color:var(--muted)">※予備（${cfg.spareCap}）はまだ使えます</span>`:``)+
       `<br><button class="mini-cal" onclick="registerReset('${which}')">📅 開始できる時刻をカレンダーに追加</button>`;
