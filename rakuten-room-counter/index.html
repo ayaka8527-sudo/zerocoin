@@ -459,7 +459,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-16c（解除ボタンは予定の時刻ぶん・2回タップ。どれを押しても24時間後の通知をその場で登録）";
+const APP_VERSION="2026-08-21（次の開始が「1/1 9:00」になる不具合を修正：開始が無ければ終了扱いにしない）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -509,7 +509,8 @@ function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 
 /* ---------- 日付ユーティリティ ---------- */
 function dateKey(ts){const d=new Date(ts);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
-function hm(ts){const d=new Date(ts);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function validTs(ts){ return ts!=null && Number.isFinite(+ts) && +ts>0; }   // null/NaN/0 を時刻として扱わない（1970/1/1 9:00 表示の防止）
+function hm(ts){if(!validTs(ts))return "-";const d=new Date(ts);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
 function dur(ms){const m=Math.max(0,Math.round(ms/60000));return m<60?m+"分":Math.floor(m/60)+"時間"+(m%60)+"分";}
 function countdown(ms){
   if(ms<=0) return "まもなく";
@@ -707,7 +708,7 @@ function cancelLast(which){
     cancelArm[which]=0;
     const s=st.stages.pop();
     if(s.dayKey!=null && s.applied) bumpDailyByKey(fieldOf(which), s.dayKey, -s.applied);
-    if(st.stages.length===0) st.firstTs=null;
+    if(st.stages.length===0){ st.firstTs=null; st.ended=false; }   // 開始が無くなったら「本日終了」も解く
     save(); render();
     toast("直前の開始を取り消しました");
   }else{
@@ -750,6 +751,7 @@ function manualNotifyTs(which){ // 通知する時刻＝押した時刻＋24時�
 }
 // 同じ日ならHH:MMだけ、別日なら「M/D HH:MM」
 function relDayHm(ts){
+  if(!validTs(ts)) return "-";
   const d=new Date(ts), td=new Date();
   const sameDay = d.getFullYear()===td.getFullYear() && d.getMonth()===td.getMonth() && d.getDate()===td.getDate();
   return (sameDay?"":(d.getMonth()+1)+"/"+d.getDate()+" ")+hm(ts);
@@ -1265,7 +1267,8 @@ function renderLimiter(which){
   document.getElementById(which+"Done").textContent=stdDone+(spUsed?"+予備":"");
   document.getElementById(which+"Meter").style.width=Math.min(100,countedTotal/dayMax*100)+"%";
 
-  const finished = st.ended || (stdDone>=total && !waiting && pool<=0);
+  // 開始していなければ「終了」にはならない（summaryParts と同じ条件にそろえる）
+  const finished = !!st.firstTs && (st.ended || (stdDone>=total && !waiting && pool<=0));
   const resetTs = resetTsOf(which);
 
   // 解除時刻バナー（目立つ表示）
@@ -1323,7 +1326,10 @@ function renderLimiter(which){
   // メインの開始ボタン
   const btn=document.getElementById(which+"Btn");
   if(finished){
-    btn.disabled=true; btn.textContent=`🔁 次の開始 ${relDayHm(resetTs)}（あと${countdown(resetTs-now)}）`;
+    btn.disabled=true;
+    btn.textContent = validTs(resetTs)
+      ? `🔁 次の開始 ${relDayHm(resetTs)}（あと${countdown(resetTs-now)}）`
+      : `🔁 本日ぶんは終了`;
   }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
   else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
