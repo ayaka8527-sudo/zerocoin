@@ -111,6 +111,12 @@
   .end-day-btn:active{transform:scale(.97)}
   .end-day-btn:disabled{opacity:.4;cursor:not-allowed}
   .end-day-btn.on{border-style:solid;border-color:var(--rakuten);color:var(--rakuten);background:#fff0f3}
+  .end-day-btn.armed{border-style:solid;border-color:var(--bad);background:var(--bad);color:#fff}
+  .why{margin-top:8px;background:#fff4f4;border:1.5px solid #f3c9c9;border-radius:12px;padding:10px 12px;
+    font-size:12.5px;font-weight:700;color:#a2454f;line-height:1.6}
+  .why button{margin-top:7px;width:100%;border:none;border-radius:10px;padding:10px;font-size:13px;
+    font-weight:900;color:#fff;background:var(--ok);cursor:pointer}
+  .why button:active{transform:scale(.97)}
   .finish-btn{width:100%;margin-top:8px;border:none;border-radius:14px;padding:15px;font-size:15px;
     font-weight:900;color:#fff;background:var(--ok);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)}
   .finish-btn:active{transform:scale(.97)}
@@ -325,7 +331,7 @@
   <!-- いいね -->
   <div class="card like" id="secLike">
     <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
-    <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋200＋300＝800）</div>
+    <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="rel-input" id="likeRelBtns"></div>
     <div class="plan-box" id="likeRelPlan"></div>
@@ -333,6 +339,7 @@
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <div class="cal-nudge" id="likeCalNudge" style="display:none"></div>
     <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
+    <div class="why" id="likeWhy" style="display:none"></div>
     <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="likeHalfBtn" onclick="halfStage('like')" style="display:none">🌓 半分で終了</button>
     <button class="start-btn extra" id="likeExtraBtn" onclick="pressExtra('like')" style="display:none">▶ 残りを開始</button>
@@ -356,6 +363,7 @@
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <div class="cal-nudge" id="followCalNudge" style="display:none"></div>
     <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
+    <div class="why" id="followWhy" style="display:none"></div>
     <button class="finish-btn" id="followFinishBtn" onclick="finishStage('follow')" style="display:none">✅ 終了する</button>
     <button class="half-btn" id="followHalfBtn" onclick="halfStage('follow')" style="display:none">🌓 半分で終了</button>
     <button class="start-btn extra" id="followExtraBtn" onclick="pressExtra('follow')" style="display:none">▶ 残りを開始</button>
@@ -455,11 +463,11 @@
 "use strict";
 const HOUR=3600000, DAY=86400000;
 const CFG = {
-  like:   { counts:[300,200,300],                     spareCap:200, emoji:"❤️", name:"いいね", color:"--like" },
+  like:   { counts:[300,300,200],                     spareCap:200, emoji:"❤️", name:"いいね", color:"--like" },
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-21b（次の開始が「1/1 9:00」になる不具合を修正。次に開始できる時間に日付を表示）";
+const APP_VERSION="2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -468,6 +476,12 @@ function migrate(s){
     // 既存の回：これまでの計上（開始日にcounted分）と食い違わないよう初期化
     if(x.dayKey==null){ x.dayKey=dateKey(x.startTs); x.applied=(x.counted!=null?x.counted:x.cap); }
   }); });
+  // 「本日終了」を押した日を持っていない旧データは、最後に開始した日に押したものとみなす
+  ["like","follow"].forEach(w=>{ const t=s[w];
+    if(t && t.ended && t.endedKey==null){
+      const last=(t.stages&&t.stages.length)?t.stages[t.stages.length-1].startTs:t.firstTs;
+      t.endedKey = last!=null ? dateKey(last) : null;
+    } });
   if(!s.manualRel) s.manualRel={like:null, follow:null};
   else ["like","follow"].forEach(w=>{ if(s.manualRel[w] && s.manualRel[w].markTs==null) s.manualRel[w]=null; });  // 旧形式(key/hm・relTs)は破棄
   if(!s.drafts) s.drafts=[];
@@ -489,8 +503,8 @@ function jumpTo(id){
 
 function blankState(){
   return {
-    like:   { firstTs:null, stages:[], ended:false },   // stages: {startTs, releaseTs, cap, notified}
-    follow: { firstTs:null, stages:[], ended:false },
+    like:   { firstTs:null, stages:[], ended:false, endedKey:null },   // stages: {startTs, releaseTs, cap, notified}
+    follow: { firstTs:null, stages:[], ended:false, endedKey:null },
     posting:{ active:false, startTs:null, count:0 },
     rounds: [],
     daily:  {},
@@ -522,8 +536,17 @@ const todayKey=()=>dateKey(Date.now());
 /* ---------- 上限ロジック（開始ボタン式） ---------- */
 function maybeReset(which){
   const st=state[which];
+  clearStaleEnd(which);
   const rt=resetTsOf(which);
-  if(st.firstTs && rt && Date.now()>=rt){ st.firstTs=null; st.stages=[]; st.ended=false; return true; }
+  if(st.firstTs && rt && Date.now()>=rt){ st.firstTs=null; st.stages=[]; st.ended=false; st.endedKey=null; return true; }
+  return false;
+}
+// 前の日に押した「本日終了」は持ち越さない（日が変わったら自動で解いて、その日の残りぶんを続けられるようにする）
+function clearStaleEnd(which){
+  const st=state[which];
+  if(st.ended && st.endedKey && st.endedKey!==todayKey()){
+    st.ended=false; st.endedKey=null; save(); return true;
+  }
   return false;
 }
 // 「解除の時間」を記録していれば毎日その時刻に解除される前提で、起点より後の最初の同時刻を返す
@@ -578,6 +601,7 @@ function poolOf(which){
 
 function press(which){
   maybeReset(which);
+  if(state[which].ended){ toast("🔚 本日終了にしています。取り消してから始めてください"); return; }
   const cfg=CFG[which], st=state[which], now=Date.now();
   if(standardDone(which)>=cfg.counts.length){ toast("規定回数は完了です（予備または取消をどうぞ）"); return; }
   if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
@@ -594,6 +618,7 @@ function press(which){
 }
 function pressSpare(which){
   maybeReset(which);
+  if(state[which].ended){ toast("🔚 本日終了にしています。取り消してから始めてください"); return; }
   const cfg=CFG[which], st=state[which], now=Date.now();
   if(spareUsed(which)){ toast("予備はすでに使用済みです"); return; }
   if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
@@ -610,6 +635,7 @@ function pressSpare(which){
 }
 function pressExtra(which){
   maybeReset(which);
+  if(state[which].ended){ toast("🔚 本日終了にしています。取り消してから始めてください"); return; }
   const st=state[which], now=Date.now();
   if(inWait(which)){ toast("まだ解除前です（あと"+countdown(st.stages[st.stages.length-1].releaseTs-now)+"）"); return; }
   const pool=poolOf(which);
@@ -698,6 +724,8 @@ function halfStage(which){
 }
 let cancelArm={like:0,follow:0};
 const CANCEL_WINDOW=2500;
+let endArm={like:0,follow:0};      // 「本日終了」の2回タップ用（1タップで一日ロックされるのを防ぐ）
+const END_WINDOW=2500;
 let relArm={like:{id:null,ts:0}, follow:{id:null,ts:0}};   // 解除ボタンの2回タップ用（誤タップ防止）
 const REL_WINDOW=2500;
 function cancelLast(which){
@@ -708,7 +736,7 @@ function cancelLast(which){
     cancelArm[which]=0;
     const s=st.stages.pop();
     if(s.dayKey!=null && s.applied) bumpDailyByKey(fieldOf(which), s.dayKey, -s.applied);
-    if(st.stages.length===0){ st.firstTs=null; st.ended=false; }   // 開始が無くなったら「本日終了」も解く
+    if(st.stages.length===0){ st.firstTs=null; st.ended=false; st.endedKey=null; }   // 開始が無くなったら「本日終了」も解く
     save(); render();
     toast("直前の開始を取り消しました");
   }else{
@@ -721,8 +749,17 @@ function cancelLast(which){
 function endDay(which){
   const st=state[which];
   if(!st.firstTs){ toast("まだ開始していません"); return; }
-  if(st.ended){ st.ended=false; save(); render(); toast("本日終了を取り消しました"); return; }
-  st.ended=true; save(); render();
+  if(st.ended){ st.ended=false; st.endedKey=null; endArm[which]=0; save(); render(); toast("本日終了を取り消しました"); return; }
+  const now=Date.now(), rt=resetTsOf(which);
+  // セーフティ：1タップ目では終了せず、2.5秒以内にもう一度押されたときだけ確定する
+  if(now-endArm[which] >= END_WINDOW){
+    endArm[which]=now; render();
+    toast("もう一度タップで本日終了（"+(validTs(rt)?relDayHm(rt):"次のリセット")+"まで開始できなくなります）");
+    setTimeout(()=>{ if(Date.now()-endArm[which]>=END_WINDOW){ endArm[which]=0; render(); } }, END_WINDOW+100);
+    return;
+  }
+  endArm[which]=0;
+  st.ended=true; st.endedKey=todayKey(); save(); render();
   registerReset(which);   // 翌日の解除（リセット）時刻をカレンダー登録
   toast("本日終了。翌日の解除をカレンダーに登録します");
 }
@@ -885,7 +922,7 @@ function doMarkLimit(which, markTs, id){
   const calNote="／📅 明日 "+hm(markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
   if(isFirst){
     state.manualRel[which]={markTs, notified:false};
-    st.firstTs=null; st.stages=[]; st.ended=false;   // 今日の1回目からやり直し
+    st.firstTs=null; st.stages=[]; st.ended=false; st.endedKey=null;   // 今日の1回目からやり直し
     startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
     askNotify(true);
     save(); render();
@@ -1336,6 +1373,18 @@ function renderLimiter(which){
   else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
   btn.classList.toggle("compact", btn.disabled);
 
+  // 押せないときは理由と出口を出す（無効なボタンの文言だけでは理由が分からないため）
+  const why=document.getElementById(which+"Why");
+  if(st.ended){
+    why.style.display="block";
+    why.innerHTML=`🔚 「本日終了」にしたので開始できません`+
+      (validTs(resetTs)?`（このままだと ${relDayHm(resetTs)} まで）`:``)+
+      `<button onclick="endDay('${which}')">↩︎ 本日終了を取り消して続ける</button>`;
+  }else if(finished && stdDone>=total){
+    why.style.display="block";
+    why.innerHTML=`🎉 規定${total}回（${dayMax}）を使い切りました。次に開始できるのは ${validTs(resetTs)?relDayHm(resetTs):"-"} です`;
+  }else{ why.style.display="none"; why.innerHTML=""; }
+
   // 終了ボタン（満了/半分）※本日終了の後でも押せる
   const fb=document.getElementById(which+"FinishBtn");
   const hb=document.getElementById(which+"HalfBtn");
@@ -1375,8 +1424,11 @@ function renderLimiter(which){
 
   // 本日終了ボタン
   const eb=document.getElementById(which+"EndBtn");
+  const endArmed = !st.ended && (now-endArm[which] < END_WINDOW);
+  eb.classList.toggle("armed", endArmed);
   if(!st.firstTs){ eb.disabled=true; eb.textContent="🔚 本日終了にする"; eb.classList.remove("on"); }
   else if(st.ended){ eb.disabled=false; eb.textContent="↩︎ 本日終了を取り消す"; eb.classList.add("on"); }
+  else if(endArmed){ eb.disabled=false; eb.textContent="もう一度タップで本日終了"; eb.classList.remove("on"); }
   else{ eb.disabled=false; eb.textContent="🔚 本日終了にする（明日の解除を登録）"; eb.classList.remove("on"); }
 
   // ステータス＆バッジ
