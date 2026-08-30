@@ -49,6 +49,8 @@
       .note { font-size: 11px; color: var(--sub); line-height: 1.5; margin: 8px 0 0; }
       .msg { font-size: 12px; color: var(--pink); min-height: 16px; margin-top: 8px; }
       .empty { text-align: center; color: var(--sub); font-size: 13px; padding: 24px 0; }
+          .opened { background:#fff4e5; border:1px solid #f0c98a; color:#8a5a00;
+        border-radius:12px; padding:10px 12px; margin-bottom:10px; font-size:14px; line-height:1.5; }
     </style>
   </head>
   <body>
@@ -147,6 +149,9 @@
             '<div class="empty">🎉 今回ぶんは終わりました！<br>「📤 結果を書き出す」でMacに戻してください。</div>';
           return;
         }
+        // 開いてから戻ってきた人か（30分以内なら「開きました」と出す）
+        const opened =
+          S.opened && S.opened.h === it.h && Date.now() - (S.opened.at || 0) < 30 * 60000;
         const markCls = it.t === "measured" ? "measured" : "hope";
         const markTxt = it.t === "measured" ? "◎ 実測" + (it.fb != null ? " " + it.fb + "%" : "") : "○ 見込み";
         const meta = [];
@@ -155,6 +160,9 @@
         if (it.age != null) meta.push("開設 " + it.age + "日");
         if (it.v) meta.push(it.v);
         $("#main").innerHTML =
+          (opened
+            ? '<div class="opened">↩︎ この人を開きました。フォローしたら「✓ フォローした」を押してください</div>'
+            : "") +
           '<div class="card">' +
           '<span class="mark ' + markCls + '">' + markTxt + "</span>" +
           '<div class="name">' + esc(it.n || it.h) + "</div>" +
@@ -165,15 +173,25 @@
           '<button class="big did" id="did">✓ フォローした</button>' +
           "</div>" +
           '<button class="big skip" id="sk">この人はやめる</button>';
-        $("#go").onclick = () => window.open("https://room.rakuten.co.jp/" + it.h, "_blank");
+        // ★同じタブで開く（2026-08-30 ユーザー指示）。新しいタブだと、フォローしたあと
+        //   自分でタブを切り替えて戻る必要があり、1日800人ではそこが一番の負担になる。
+        //   同じタブなら Safari の「戻る」1回でこの画面に帰ってこられる。
+        //   誰を開いたかを控えておいて、帰ってきたら「この人を開きました」と出す
+        $("#go").onclick = () => {
+          S.opened = { h: it.h, at: Date.now() };
+          save(S);
+          location.href = "https://room.rakuten.co.jp/" + it.h;
+        };
         $("#did").onclick = () => {
           S.done[it.h] = { ...it, at: Date.now(), day: todayStr() };
           S.i = (S.i + 1) % S.items.length;
+          S.opened = null;
           save(S); render();
         };
         $("#sk").onclick = () => {
           S.skip[it.h] = Date.now();
           S.i = (S.i + 1) % S.items.length;
+          S.opened = null;
           save(S); render();
         };
       }
@@ -196,8 +214,13 @@
       // 開いたときに、Macが新しいリストを出していれば黙って入れ替える。
       // ★これが無いと、一度読み込んだあとは「開いても何も起きない」ままになる
       //   （2026-08-11 ユーザー報告）。中身が同じなら何もしない
+      // ★同じタブで開くようにしたので、1人回るごとにこの画面へ戻ってくる。
+      //   そのたびに取りに行くと800人ぶんの通信になるので、10分に1回までにする
       async function refreshIfNewer() {
         try {
+          if (S.checkedAt && Date.now() - S.checkedAt < 10 * 60000) return;
+          S.checkedAt = Date.now();
+          save(S);
           const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
           if (!r.ok) return;
           const d = await r.json();
