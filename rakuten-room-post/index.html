@@ -87,8 +87,11 @@
 
     <details id="ammo-box">
       <summary>① 弾をそろえる</summary>
-      <p class="note">iPhoneだけでROOMのAPIから直接そろえます。<b>Macは要りません。</b>
-        自分の棚を初めて読む日だけ2〜3分かかります（次からは20秒ほど）。</p>
+      <p class="note"><b>いまは使えません（2026-09-02）。</b>
+        ROOMのAPIは <code>content-type: text/plain</code> ＋ <code>nosniff</code> で返ってくるので、
+        ブラウザが <code>&lt;script&gt;</code> として実行するのを拒みます（JSONPが通らない）。
+        <b>iPhoneのブラウザから直接そろえる道は塞がっています。</b><br>
+        いまは下の「📥 リストを読み込む」＝Macの拡張から渡す道を使ってください。</p>
       <div class="ammo-row">
         <button id="ammo-new">🆕 新規</button>
         <button id="ammo-repost">🔁 貼り替え・再投稿</button>
@@ -241,13 +244,13 @@
         const it = cur();
         if (!total) {
           $("#main").innerHTML =
-            '<div class="empty">リストがありません。<br>上の「① 弾をそろえる」から始めてください。<br><span style="font-size:11px">（Macの拡張から渡す道も残してあります → 下の「📥 リストを読み込む」）</span></div>';
+            '<div class="empty">リストがありません。<br>Macの拡張で「弾をそろえる」を押すと届きます。<br>下の「📥 リストを読み込む」からも入れられます。</div>';
           $("#cap-box").hidden = true;
           return;
         }
         if (!it) {
           $("#main").innerHTML =
-            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾は上の「① 弾をそろえる」から。</div>';
+            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾はMacの拡張でそろえてください。</div>';
           $("#cap-box").hidden = true;
           return;
         }
@@ -475,8 +478,13 @@
         $("#ammo-box").open = false;
         showTables();
       }
-      $("#ammo-new").onclick = () => ammoGo("new");
-      $("#ammo-repost").onclick = () => ammoGo("repost");
+      // ★ボタンは消さずに止める（消すと $("#id") が引けなくなって静かに壊れる）。
+      //   ammo.js の中身は残してある＝叩ける道が用意できたら、ここを戻すだけで動く
+      const AMMO_OFF = "ROOMのAPIが text/plain ＋ nosniff で返るため、ブラウザから直接は読めません。"
+        + "下の「📥 リストを読み込む」でMacの拡張から受け取ってください。";
+      $("#ammo-new").disabled = $("#ammo-repost").disabled = true;
+      $("#ammo-new").onclick = () => ammoMsg(AMMO_OFF, "err");
+      $("#ammo-repost").onclick = () => ammoMsg(AMMO_OFF, "err");
       $("#ammo-lead").value = localStorage.getItem("roomPostLead") || "2";
 
       // 並べ方の表がいつのものか、棚を何件持っているかを出す。
@@ -529,8 +537,7 @@
       render();
       showTables();
       // ★リストが無いときは「① 弾をそろえる」を開いておく（そこから始まるので表に出す）
-      if (!S.items.length) { $("#ammo-box").open = true; refreshIfNewer(); }
-      else refreshIfNewer();
+      refreshIfNewer();
       document.addEventListener("visibilitychange", () => {
         if (!document.hidden) { render(); refreshIfNewer(); }
       });
