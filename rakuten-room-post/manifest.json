@@ -1,0 +1,11 @@
+{
+  "name": "楽天ROOM 投稿",
+  "short_name": "ROOM投稿",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e0405f",
+  "icons": [
+    { "src": "../rakuten-room-counter/apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

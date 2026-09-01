@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="../rakuten-room-counter/apple-touch-icon-180.png" />
+    <title>楽天ROOM 投稿</title>
+    <style>
+      :root { --pink: #e0405f; --line: #f0e6e8; --sub: #8b8b90; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body {
+        margin: 0; padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+        font-family: -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
+        color: #333; background: #fff;
+      }
+      h1 { font-size: 16px; margin: 0 0 2px; }
+      .sub { font-size: 11px; color: var(--sub); margin: 0 0 12px; }
+
+      .bar { height: 8px; background: #f2e6e8; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+      .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff5a7a, #ff8a5a); }
+      .prog { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 10px; }
+      .prog b { color: var(--pink); font-size: 15px; }
+
+      .cap-warn { background: #fff4e5; border: 1px solid #f0c98a; color: #8a5a00;
+        border-radius: 10px; padding: 9px 11px; margin-bottom: 10px; font-size: 12.5px; line-height: 1.5; }
+      .cap-warn.stop { background: #fdecec; border-color: #e8a0a0; color: #a11; }
+
+      .card { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+      .mark { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; margin-bottom: 6px; }
+      .mark.new { background: #eaf6ec; color: #1d7a3a; }
+      .mark.repost { background: #fdeaea; color: #a11; }
+      .mark.edit { background: #e7f0ff; color: #14459c; }
+      .shop { font-size: 12px; color: var(--pink); font-weight: 700; }
+      .name { font-size: 15px; font-weight: 700; margin: 3px 0 5px; line-height: 1.45; word-break: break-all; }
+      .meta { font-size: 12px; color: var(--sub); line-height: 1.5; }
+
+      button { font-family: inherit; border: none; cursor: pointer; }
+      .big {
+        display: block; width: 100%; padding: 16px; border-radius: 12px;
+        font-size: 16px; font-weight: 700; margin-top: 8px;
+      }
+      .open { background: linear-gradient(135deg, #ff5a7a, #ff7a5a); color: #fff; }
+      .open.del { background: linear-gradient(135deg, #b02a2a, #d4553f); }
+      .did { background: #fff; color: var(--pink); border: 2px solid var(--pink); }
+      .skip { background: #fff; color: #999; border: 1px solid #ddd; font-weight: 400; font-size: 14px; padding: 12px; }
+      .step-hint { font-size: 12px; color: var(--sub); margin: 8px 2px 0; line-height: 1.6; }
+      .step-hint b { color: #555; }
+
+      details { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-top: 12px; }
+      summary { font-size: 13px; font-weight: 600; color: #666; }
+      textarea { width: 100%; height: 90px; border: 1px solid #e2e2e6; border-radius: 8px; padding: 8px; font-size: 12px; margin-top: 8px; }
+      textarea.cap { height: 150px; font-size: 12.5px; line-height: 1.6; }
+      .mini { background: #fafafc; border: 1px solid #e6e6ea; color: #555; border-radius: 8px; padding: 10px; font-size: 13px; width: 100%; margin-top: 6px; }
+      .note { font-size: 11px; color: var(--sub); line-height: 1.5; margin: 8px 0 0; }
+      .msg { font-size: 12px; color: var(--pink); min-height: 16px; margin-top: 8px; }
+      .empty { text-align: center; color: var(--sub); font-size: 13px; padding: 24px 0; line-height: 1.7; }
+      .opened { background: #fff4e5; border: 1px solid #f0c98a; color: #8a5a00;
+        border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }
+      .opened.ok { background: #eaf6ec; border-color: #a9d8b6; color: #1d6b34; }
+    </style>
+  </head>
+  <body>
+    <h1 id="title">🆕 投稿</h1>
+    <p class="sub">コピーして開く → ペーストして投稿 → ✓で次へ。<b>投稿ボタンを押すのは自分の手です。</b></p>
+
+    <div class="bar"><i id="fill"></i></div>
+    <div class="prog">
+      <span><b id="pos">–</b> / <span id="total">–</span> 件目</span>
+      <span>今日 <b id="today">0</b> 件（1時間 <span id="hour">0</span>）</span>
+    </div>
+
+    <div id="cap"></div>
+    <div id="main"></div>
+    <p class="msg" id="msg"></p>
+
+    <details id="cap-box">
+      <summary>📄 紹介文をそのまま見る（コピーできなかったとき）</summary>
+      <p class="note">長押しして全部選び、コピーしてください。</p>
+      <textarea class="cap" id="cap-text" readonly></textarea>
+    </details>
+
+    <details>
+      <summary>📥 リストを読み込む</summary>
+      <button class="mini" id="load-net">🌐 最新のリストを取り込む</button>
+      <p class="note">
+        Macの拡張で「弾をそろえる」を押すと、ここに届きます。届かないときは拡張の「📱 iPhoneへ渡す」でコピーした中身を下に貼ってください。
+      </p>
+      <textarea id="paste" placeholder="ここに貼り付け"></textarea>
+      <button class="mini" id="load-paste">貼り付けた中身を読み込む</button>
+      <button class="mini" id="reset">↩️ 最初から回り直す</button>
+    </details>
+
+    <details>
+      <summary>📤 結果を書き出す</summary>
+      <p class="note">
+        iPhoneで投稿したぶんをMacの拡張に伝えます。コピーして拡張の「📥 iPhoneの結果」に貼ってください。
+        投稿そのものはROOMのAPIから拾えるので<b>必須ではありません</b>が、同じ商品がすぐ弾に出てこなくなります。
+      </p>
+      <button class="mini" id="copy-result">📋 結果をコピー</button>
+      <button class="mini" id="clear-result">書き出した記録を消す</button>
+    </details>
+
+    <script>
+      // 楽天ROOM 投稿（iPhone用）
+      //
+      // 拡張と役割を分ける：弾集め・並べ替え・紹介文づくり・販売開始前の除外は **Macの拡張** がやり、
+      // ここは **コピーする・開く・記録する** だけ。
+      // ★iOSでは紹介文をROOMの入力欄へ流し込めない（拡張が入れられないため）。
+      //   なのでクリップボードに入れて、本人が長押しでペーストする。
+      // ★投稿ボタン・削除ボタンを押すのは本人。このページはROOMを操作しない（規約遵守・拡張と同じ方針）。
+      const $ = (s) => document.querySelector(s);
+      const KEY = "roomPostPhone";
+      const DATA_URL = "data/post.json";
+      const CAP_DAY = 200;   // 1日の上限（本人確認済み）
+      const CAP_HOUR = 100;  // 1時間の上限
+
+      const load = () => {
+        try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; }
+      };
+      const save = (s) => localStorage.setItem(KEY, JSON.stringify(s));
+      let S = load();
+      S.items = S.items || [];
+      S.i = S.i || 0;
+      S.done = S.done || {};  // {cid: {...it, at, day}} 拡張へ返すぶん
+      S.skip = S.skip || {};
+      S.step = S.step || {};  // {cid: 1|2} 再投稿の「消した」まで進んだか
+
+      const todayStr = () => new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+      const doneToday = () => Object.values(S.done).filter((d) => d.day === todayStr()).length;
+      const doneHour = () => {
+        const t = Date.now() - 3600000;
+        return Object.values(S.done).filter((d) => (d.at || 0) > t).length;
+      };
+
+      function msg(t) {
+        $("#msg").textContent = t || "";
+        if (t) setTimeout(() => ($("#msg").textContent = ""), 3000);
+      }
+
+      // ★iOS Safari では navigator.clipboard.writeText のあとすぐ画面遷移すると
+      //   書き込みが間に合わないことがある。execCommand は同期で終わるのでこちらを先に試す。
+      function copyText(t) {
+        let ok = false;
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = t;
+          ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;";
+          document.body.appendChild(ta);
+          ta.contentEditable = "true";
+          ta.readOnly = false;
+          const rg = document.createRange();
+          rg.selectNodeContents(ta);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(rg);
+          ta.setSelectionRange(0, t.length);
+          ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+        } catch (e) { ok = false; }
+        if (!ok && navigator.clipboard) {
+          try { navigator.clipboard.writeText(t); ok = true; } catch (e) {}
+        }
+        return ok;
+      }
+
+      // まだ済んでいないもののうち、いまの位置から次の1件
+      function cur() {
+        for (let n = 0; n < S.items.length; n++) {
+          const j = (S.i + n) % S.items.length;
+          const it = S.items[j];
+          if (it && !S.done[it.c] && !S.skip[it.c]) { S.i = j; return it; }
+        }
+        return null;
+      }
+
+      const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+      const MARK = {
+        new:    { cls: "new",    txt: "🆕 新規" },
+        repost: { cls: "repost", txt: "🔁 消して投稿し直し" },
+        edit:   { cls: "edit",   txt: "✏️ 紹介文だけ書き換え" },
+      };
+
+      // 上限のお知らせ。**止めはしない**（判断は本人）が、必ず出す
+      function renderCap() {
+        const d = doneToday(), h = doneHour();
+        let html = "";
+        if (d >= CAP_DAY) html = '<div class="cap-warn stop">今日 ' + d + ' 件。<b>1日の上限200件に達しています。</b>ここで止めてください。</div>';
+        else if (h >= CAP_HOUR) html = '<div class="cap-warn stop">直近1時間で ' + h + ' 件。<b>1時間の上限100件に達しています。</b>1時間あけてください。</div>';
+        else if (h >= CAP_HOUR - 10) html = '<div class="cap-warn">直近1時間で ' + h + ' 件。あと ' + (CAP_HOUR - h) + ' 件で1時間の上限です。</div>';
+        else if (d >= CAP_DAY - 10) html = '<div class="cap-warn">今日 ' + d + ' 件。あと ' + (CAP_DAY - d) + ' 件で1日の上限です。</div>';
+        $("#cap").innerHTML = html;
+      }
+
+      function render() {
+        const total = S.items.length;
+        const left = S.items.filter((x) => !S.done[x.c] && !S.skip[x.c]).length;
+        $("#total").textContent = total || "–";
+        $("#pos").textContent = total ? Math.min(total - left + 1, total) : "–";
+        $("#today").textContent = doneToday();
+        $("#hour").textContent = doneHour();
+        $("#fill").style.width = total ? Math.round(((total - left) / total) * 100) + "%" : "0%";
+        $("#title").textContent = S.kind === "repost" ? "🔁 貼り替え・再投稿" : "🆕 新規投稿";
+        renderCap();
+
+        const it = cur();
+        if (!total) {
+          $("#main").innerHTML =
+            '<div class="empty">リストがありません。<br>Macの拡張で「弾をそろえる」を押すと届きます。<br>下の「📥 リストを読み込む」からも入れられます。</div>';
+          $("#cap-box").hidden = true;
+          return;
+        }
+        if (!it) {
+          $("#main").innerHTML =
+            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾はMacの拡張でそろえてください。</div>';
+          $("#cap-box").hidden = true;
+          return;
+        }
+        $("#cap-box").hidden = false;
+        $("#cap-text").value = it.t || "";
+
+        const route = it.r || "new";
+        const mk = MARK[route] || MARK.new;
+        const meta = [];
+        if (it.p) meta.push("¥" + Number(it.p).toLocaleString("ja-JP"));
+        if (it.l != null) meta.push("いいね " + it.l);
+        if (it.k) meta.push(it.k);
+
+        // 開いてから戻ってきたか（30分以内）。どのボタンで開いたかも覚えておく
+        const op = S.opened;
+        const opened = op && op.c === it.c && Date.now() - (op.at || 0) < 30 * 60000;
+        const step = S.step[it.c] || 1; // 再投稿だけ 1=まだ消していない / 2=消した
+
+        let band = "";
+        if (opened && op.what === "del") {
+          band = '<div class="opened">↩︎ 自分の投稿を開きました。<b>消せたら「② コピーして商品ページ」</b>へ進んでください。</div>';
+        } else if (opened) {
+          band = '<div class="opened ok">↩︎ 紹介文はコピー済みです。<b>投稿できたら「✓ 投稿した」</b>を押してください。</div>';
+        }
+
+        let btns = "", hint = "";
+        if (route === "repost") {
+          if (step === 1) {
+            btns =
+              '<button class="big open del" id="go-del">① 自分の投稿を開いて消す</button>' +
+              '<button class="big skip" id="did-del">消しました → ②へ</button>';
+            hint = '<p class="step-hint">投稿の右上「⋯」→ <b>削除</b>。消したらSafariの戻るでここへ帰ってきて「消しました」を押します。</p>';
+          } else {
+            btns =
+              '<button class="big open" id="go">② 📋 コピーして商品ページを開く</button>' +
+              '<div><button class="big did" id="did">✓ 投稿した</button></div>';
+            hint = '<p class="step-hint">商品ページの<b>「ROOMに投稿」</b>→ 紹介文の欄を長押しして<b>ペースト</b>→ 投稿。</p>';
+          }
+        } else if (route === "edit") {
+          btns =
+            '<button class="big open" id="go">📋 コピーして自分の投稿を開く</button>' +
+            '<div><button class="big did" id="did">✓ 書き換えた</button></div>';
+          hint = '<p class="step-hint">投稿の「⋯」→ <b>編集</b> → 紹介文を全部消してペースト → 保存。<b>いいねが多いので消しません。</b></p>';
+        } else {
+          btns =
+            '<button class="big open" id="go">📋 コピーして商品ページを開く</button>' +
+            '<div><button class="big did" id="did">✓ 投稿した</button></div>';
+          hint = '<p class="step-hint">商品ページの<b>「ROOMに投稿」</b>→ 紹介文の欄を長押しして<b>ペースト</b>→ 投稿。</p>';
+        }
+
+        $("#main").innerHTML =
+          band +
+          '<div class="card">' +
+            '<span class="mark ' + mk.cls + '">' + mk.txt + "</span>" +
+            '<div class="shop">' + esc(it.s || "") + "</div>" +
+            '<div class="name">' + esc(it.n || "") + "</div>" +
+            '<div class="meta">' + esc(meta.join("・")) + "</div>" +
+          "</div>" +
+          btns + hint +
+          '<button class="big skip" id="sk">この商品はやめる</button>';
+
+        // ★同じタブで開く（フォロー回りアプリと同じ）。新しいタブだと投稿のあと
+        //   自分でタブを切り替えて戻ることになり、90件ではそこが一番の負担になる。
+        //   同じタブなら Safari の「戻る」1回でこの画面に帰ってこられる。
+        const openTab = (url, what) => {
+          S.opened = { c: it.c, at: Date.now(), what };
+          save(S);
+          setTimeout(() => { location.href = url; }, 120); // コピーが終わるのを待つ
+        };
+
+        const goDel = $("#go-del");
+        if (goDel) goDel.onclick = () => openTab(it.o || ("https://room.rakuten.co.jp/"), "del");
+        const didDel = $("#did-del");
+        if (didDel) didDel.onclick = () => { S.step[it.c] = 2; S.opened = null; save(S); render(); };
+
+        const go = $("#go");
+        if (go) go.onclick = () => {
+          const ok = copyText(it.t || it.n || "");
+          msg(ok ? "紹介文をコピーしました" : "コピーできませんでした。下の📄から長押しでコピーしてください");
+          openTab(route === "edit" ? (it.o || it.u) : (it.u || it.o), "post");
+        };
+
+        const did = $("#did");
+        if (did) did.onclick = () => {
+          S.done[it.c] = { c: it.c, k: it.k || "", n: it.n || "", s: it.s || "", r: route, at: Date.now(), day: todayStr() };
+          delete S.step[it.c];
+          S.i = (S.i + 1) % S.items.length;
+          S.opened = null;
+          save(S); render();
+        };
+
+        $("#sk").onclick = () => {
+          S.skip[it.c] = Date.now();
+          delete S.step[it.c];
+          S.i = (S.i + 1) % S.items.length;
+          S.opened = null;
+          save(S); render();
+        };
+      }
+
+      function applyList(json) {
+        const d = typeof json === "string" ? JSON.parse(json) : json;
+        const items = (d.items || d).filter((x) => x && x.c && (x.u || x.o));
+        if (!items.length) throw new Error("中身がありません");
+        S.items = items;
+        S.kind = d.kind || "";
+        S.at = d.at || Date.now(); // いつMacが作ったリストか（新しいものだけ入れ替えるため）
+        S.i = 0;
+        S.skip = {};
+        S.step = {};
+        save(S);
+        render();
+        return items.length;
+      }
+
+      // 開いたときに、Macが新しいリストを出していれば黙って入れ替える。
+      // ★同じタブで開くので1件ごとにこの画面へ戻ってくる。毎回取りに行くと
+      //   90件ぶんの通信になるので10分に1回までにする（フォロー回りアプリと同じ）
+      async function refreshIfNewer() {
+        try {
+          if (S.checkedAt && Date.now() - S.checkedAt < 10 * 60000) return;
+          S.checkedAt = Date.now();
+          save(S);
+          const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+          if (!r.ok) return;
+          const d = await r.json();
+          if (!d || !Array.isArray(d.items) || !d.items.length) return;
+          if (S.at && d.at && d.at <= S.at) return; // 前と同じ（or 古い）なら触らない
+          // ★回っている途中で入れ替えない（残りがあるうちは待つ）。
+          //   90件の半分でリストが変わると、どこまでやったか分からなくなる
+          const left = S.items.filter((x) => !S.done[x.c] && !S.skip[x.c]).length;
+          if (left > 0) { msg("新しいリストが届いています（いまのぶんが終わったら入れ替えます）"); return; }
+          applyList(d);
+          msg("新しいリスト（" + d.items.length + "件）に入れ替えました");
+        } catch (e) {}
+      }
+
+      $("#load-net").onclick = async () => {
+        try {
+          const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          msg(applyList(await r.json()) + "件を読み込みました");
+        } catch (e) {
+          msg("取れませんでした：" + e.message);
+        }
+      };
+      $("#load-paste").onclick = () => {
+        try {
+          msg(applyList($("#paste").value.trim()) + "件を読み込みました");
+          $("#paste").value = "";
+        } catch (e) {
+          msg("読めませんでした：" + e.message);
+        }
+      };
+      $("#reset").onclick = () => {
+        if (!confirm("最初から回り直します。投稿済みの記録は残ります。")) return;
+        S.i = 0; S.skip = {}; S.step = {}; save(S); render();
+      };
+      $("#copy-result").onclick = () => {
+        const out = JSON.stringify({ from: "phone-post", at: Date.now(), done: Object.values(S.done) });
+        if (copyText(out)) msg(Object.keys(S.done).length + "件ぶんコピーしました");
+        else { $("#paste").value = out; msg("コピーできないので上の欄に出しました。長押しで選んでコピーしてください"); }
+      };
+      $("#clear-result").onclick = () => {
+        if (!confirm("書き出した記録（投稿したもの）を消します。よろしいですか？")) return;
+        S.done = {}; save(S); render(); msg("消しました");
+      };
+
+      render();
+      if (!S.items.length) $("#load-net").click();
+      else refreshIfNewer();
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) { render(); refreshIfNewer(); }
+      });
+    </script>
+  </body>
+</html>
