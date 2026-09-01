@@ -1,0 +1,4 @@
+# 棚と「もう出した」の控え（localStorage の中身）。手元だけのもの
+.post_state.json
+.pages.json
+.push.log

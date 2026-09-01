@@ -600,8 +600,21 @@
     return arranged;
   }
 
+  // 弾の1件を、画面が回せる形にする。
+  // ★ここに一本化する（画面とMac側の作り置きで別々に書くと、片方だけずれる）
+  const ROUTE_TH = 100; // いいねがこれ以上なら「消さずに書き換え」（拡張と同じ）
+  function toItem(x, kind) {
+    const route = kind === "new" ? "new" : (x.likes || 0) >= ROUTE_TH ? "edit" : "repost";
+    return {
+      c: x.roomUrl ? String(x.roomUrl).replace(/\/$/, "").split("/").pop() : "new:" + x.url,
+      r: route, n: x.name || "", s: x.shop || "", p: x.price || 0,
+      l: x.likes == null ? null : x.likes,
+      u: x.url || "", o: x.roomUrl || "", t: x.content || x.name || "", k: x.key || "",
+    };
+  }
+
   global.RoomAmmo = {
-    buildNew, buildRepost, remember, usedKeys,
+    buildNew, buildRepost, remember, usedKeys, toItem, ROUTE_TH,
     shelfInfo: () => jload(SHELF_KEY, null),
     clearShelf: () => { localStorage.removeItem(SHELF_KEY); },
     tables,

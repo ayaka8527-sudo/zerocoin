@@ -7,8 +7,9 @@
 #   3. iPhoneのアプリは開いたときに最新を読む
 #
 # 手で走らせることもできる：
-#   引数なし … ダウンロードにある post.json を取り込む
-#   pbpaste  … クリップボードの中身を取り込む（「📱 iPhoneへ渡す」でコピーしたとき）
+#   引数なし     … ダウンロードにある post.json を取り込む
+#   pbpaste      … クリップボードの中身を取り込む（「📱 iPhoneへ渡す」でコピーしたとき）
+#   file <path>  … そのファイルを取り込む（build_post.py から呼ばれる）
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -16,7 +17,11 @@ DL="$HOME/Downloads"
 TMP=$(mktemp)
 SRC=""
 
-if [ "${1:-}" = "pbpaste" ]; then
+if [ "${1:-}" = "file" ]; then
+  # build_post.py が作ったものを、そのまま使う
+  cp "$2" "$TMP"
+  SRC="$2"
+elif [ "${1:-}" = "pbpaste" ]; then
   pbpaste > "$TMP"
   SRC="クリップボード"
 else
@@ -47,7 +52,7 @@ mkdir -p data
 cp "$TMP" data/post.json
 rm -f "$TMP"
 # 取り込んだら、ダウンロードのほうは片づける（同じものを何度も拾わないため）
-if [ "${1:-}" != "pbpaste" ]; then rm -f "$DL"/post*.json; fi
+if [ -z "${1:-}" ]; then rm -f "$DL"/post*.json; fi
 
 git add data/post.json
 if git diff --cached --quiet; then

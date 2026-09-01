@@ -87,11 +87,11 @@
 
     <details id="ammo-box">
       <summary>① 弾をそろえる</summary>
-      <p class="note"><b>いまは使えません（2026-09-02）。</b>
-        ROOMのAPIは <code>content-type: text/plain</code> ＋ <code>nosniff</code> で返ってくるので、
-        ブラウザが <code>&lt;script&gt;</code> として実行するのを拒みます（JSONPが通らない）。
-        <b>iPhoneのブラウザから直接そろえる道は塞がっています。</b><br>
-        いまは下の「📥 リストを読み込む」＝Macの拡張から渡す道を使ってください。</p>
+      <p class="note"><b>いまは自動で届きます。</b>Macが <b>毎日4時台と20時台</b> に弾を作って送るので、
+        ここを押す必要はありません（朝枠＝貼り替え・再投稿／夜枠＝新規）。<br>
+        <span style="font-size:11px">iPhoneのブラウザから直接そろえる道は塞がっています。ROOMのAPIは
+        <code>content-type: text/plain</code> ＋ <code>nosniff</code> で返るので、
+        <code>&lt;script&gt;</code> として実行できません（JSONPが通らない・2026-09-02に確認）。</span></p>
       <div class="ammo-row">
         <button id="ammo-new">🆕 新規</button>
         <button id="ammo-repost">🔁 貼り替え・再投稿</button>
@@ -244,13 +244,13 @@
         const it = cur();
         if (!total) {
           $("#main").innerHTML =
-            '<div class="empty">リストがありません。<br>Macの拡張で「弾をそろえる」を押すと届きます。<br>下の「📥 リストを読み込む」からも入れられます。</div>';
+            '<div class="empty">リストがありません。<br>Macが4時台と20時台に送ります。<br>下の「📥 リストを読み込む」で取りにいけます。</div>';
           $("#cap-box").hidden = true;
           return;
         }
         if (!it) {
           $("#main").innerHTML =
-            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾はMacの拡張でそろえてください。</div>';
+            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾は4時台（貼り替え）と20時台（新規）に届きます。</div>';
           $("#cap-box").hidden = true;
           return;
         }
@@ -392,8 +392,6 @@
       // ROOMのAPIは CORSヘッダを返さないが `callback=` を付けるとJSONPで返る。
       // だから <script> タグで読めば、サーバーもMacも無しで弾が作れる。
       // 中身（判定・並べ方）は ammo.js。拡張の background.js と一字一句そろえてある。
-      const ROUTE_TH = 100; // いいねがこれ以上なら「消さずに書き換え」（拡張と同じ）
-
       function ammoMsg(t, cls) {
         const el = $("#ammo-msg");
         el.innerHTML = t || "";
@@ -402,17 +400,6 @@
       function ammoProg(t, done, total) {
         ammoMsg(esc(t));
         $("#ammo-fill").style.width = total ? Math.round((done / total) * 100) + "%" : "0%";
-      }
-
-      // 弾の1件を、この画面が回せる形にする
-      function toItem(x, kind) {
-        const route = kind === "new" ? "new" : (x.likes || 0) >= ROUTE_TH ? "edit" : "repost";
-        return {
-          c: x.roomUrl ? String(x.roomUrl).replace(/\/$/, "").split("/").pop() : "new:" + x.url,
-          r: route, n: x.name || "", s: x.shop || "", p: x.price || 0,
-          l: x.likes == null ? null : x.likes,
-          u: x.url || "", o: x.roomUrl || "", t: x.content || x.name || "", k: x.key || "",
-        };
       }
 
       // 数えた内訳は必ず出す（黙って上げ下げしない・拡張と同じ鉄則）
@@ -473,7 +460,7 @@
             + (r && r.earlyCp ? "／クーポンがまだ始まらない " + r.earlyCp + "件は外しています" : ""), "err");
           return;
         }
-        applyList({ at: Date.now(), kind, items: r.rows.map((x) => toItem(x, kind)) });
+        applyList({ at: Date.now(), kind, items: r.rows.map((x) => RoomAmmo.toItem(x, kind)) });
         ammoMsg(ammoReport(r, kind), "ok");
         $("#ammo-box").open = false;
         showTables();
@@ -481,7 +468,7 @@
       // ★ボタンは消さずに止める（消すと $("#id") が引けなくなって静かに壊れる）。
       //   ammo.js の中身は残してある＝叩ける道が用意できたら、ここを戻すだけで動く
       const AMMO_OFF = "ROOMのAPIが text/plain ＋ nosniff で返るため、ブラウザから直接は読めません。"
-        + "下の「📥 リストを読み込む」でMacの拡張から受け取ってください。";
+        + "弾はMacが4時台と20時台に作って送っています。下の「📥 リストを読み込む」で取りにいけます。";
       $("#ammo-new").disabled = $("#ammo-repost").disabled = true;
       $("#ammo-new").onclick = () => ammoMsg(AMMO_OFF, "err");
       $("#ammo-repost").onclick = () => ammoMsg(AMMO_OFF, "err");
