@@ -60,6 +60,19 @@
       .opened { background: #fff4e5; border: 1px solid #f0c98a; color: #8a5a00;
         border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 14px; line-height: 1.5; }
       .opened.ok { background: #eaf6ec; border-color: #a9d8b6; color: #1d6b34; }
+      #ammo-box { border-color: #f2ccd4; }
+      #ammo-box summary { color: var(--pink); }
+      .ammo-row { display: flex; gap: 8px; margin-top: 8px; }
+      .ammo-row > button { flex: 1; padding: 14px 6px; border-radius: 12px; font-size: 15px; font-weight: 700;
+        background: linear-gradient(135deg, #ff5a7a, #ff7a5a); color: #fff; }
+      .ammo-row > button:disabled { opacity: .45; }
+      .num-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 10px; font-size: 12.5px; color: #666; }
+      .num-row input { width: 64px; font: inherit; padding: 5px 6px; border: 1px solid #ddd; border-radius: 7px; }
+      .ammo-msg { font-size: 12.5px; line-height: 1.65; margin-top: 10px; color: #555; }
+      .ammo-msg.err { color: #bf0000; }
+      .ammo-msg.ok { color: #127a2e; }
+      .ammo-bar { height: 6px; background: #f2e6e8; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+      .ammo-bar > i { display: block; height: 100%; width: 0; background: var(--pink); transition: width .2s; }
     </style>
   </head>
   <body>
@@ -71,6 +84,23 @@
       <span><b id="pos">–</b> / <span id="total">–</span> 件目</span>
       <span>今日 <b id="today">0</b> 件（1時間 <span id="hour">0</span>）</span>
     </div>
+
+    <details id="ammo-box">
+      <summary>① 弾をそろえる</summary>
+      <p class="note">iPhoneだけでROOMのAPIから直接そろえます。<b>Macは要りません。</b>
+        自分の棚を初めて読む日だけ2〜3分かかります（次からは20秒ほど）。</p>
+      <div class="ammo-row">
+        <button id="ammo-new">🆕 新規</button>
+        <button id="ammo-repost">🔁 貼り替え・再投稿</button>
+      </div>
+      <div class="num-row">
+        <label>件数 <input type="number" id="ammo-n" value="90" min="1" max="90" step="10"></label>
+        <label>販売開始・クーポン開始 <input type="number" id="ammo-lead" value="2" min="0" max="30" step="1"> 日前から</label>
+      </div>
+      <div class="ammo-bar"><i id="ammo-fill"></i></div>
+      <div class="ammo-msg" id="ammo-msg"></div>
+      <p class="note" id="ammo-tables"></p>
+    </details>
 
     <div id="cap"></div>
     <div id="main"></div>
@@ -103,6 +133,7 @@
       <button class="mini" id="clear-result">書き出した記録を消す</button>
     </details>
 
+    <script src="ammo.js"></script>
     <script>
       // 楽天ROOM 投稿（iPhone用）
       //
@@ -210,13 +241,13 @@
         const it = cur();
         if (!total) {
           $("#main").innerHTML =
-            '<div class="empty">リストがありません。<br>Macの拡張で「弾をそろえる」を押すと届きます。<br>下の「📥 リストを読み込む」からも入れられます。</div>';
+            '<div class="empty">リストがありません。<br>上の「① 弾をそろえる」から始めてください。<br><span style="font-size:11px">（Macの拡張から渡す道も残してあります → 下の「📥 リストを読み込む」）</span></div>';
           $("#cap-box").hidden = true;
           return;
         }
         if (!it) {
           $("#main").innerHTML =
-            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾はMacの拡張でそろえてください。</div>';
+            '<div class="empty">🎉 今回ぶんは終わりました！<br>次の弾は上の「① 弾をそろえる」から。</div>';
           $("#cap-box").hidden = true;
           return;
         }
@@ -354,6 +385,116 @@
         } catch (e) {}
       }
 
+      // ── ① 弾をそろえる（iPhoneだけで完結する道・2026-09-02）────────────
+      // ROOMのAPIは CORSヘッダを返さないが `callback=` を付けるとJSONPで返る。
+      // だから <script> タグで読めば、サーバーもMacも無しで弾が作れる。
+      // 中身（判定・並べ方）は ammo.js。拡張の background.js と一字一句そろえてある。
+      const ROUTE_TH = 100; // いいねがこれ以上なら「消さずに書き換え」（拡張と同じ）
+
+      function ammoMsg(t, cls) {
+        const el = $("#ammo-msg");
+        el.innerHTML = t || "";
+        el.className = "ammo-msg" + (cls ? " " + cls : "");
+      }
+      function ammoProg(t, done, total) {
+        ammoMsg(esc(t));
+        $("#ammo-fill").style.width = total ? Math.round((done / total) * 100) + "%" : "0%";
+      }
+
+      // 弾の1件を、この画面が回せる形にする
+      function toItem(x, kind) {
+        const route = kind === "new" ? "new" : (x.likes || 0) >= ROUTE_TH ? "edit" : "repost";
+        return {
+          c: x.roomUrl ? String(x.roomUrl).replace(/\/$/, "").split("/").pop() : "new:" + x.url,
+          r: route, n: x.name || "", s: x.shop || "", p: x.price || 0,
+          l: x.likes == null ? null : x.likes,
+          u: x.url || "", o: x.roomUrl || "", t: x.content || x.name || "", k: x.key || "",
+        };
+      }
+
+      // 数えた内訳は必ず出す（黙って上げ下げしない・拡張と同じ鉄則）
+      function ammoReport(r, kind) {
+        const ld = r.lead == null ? 2 : r.lead;
+        const bits = [];
+        bits.push("<b>" + r.rows.length + "件そろいました</b>（候補" + r.pool + "件）");
+        bits.push("店＝" + r.shops.slice(0, 3).map(esc).join("・") + (r.shops.length > 3 ? "ほか" : ""));
+        if (kind === "repost") bits.push(r.prAdded ? "#PRを" + r.prAdded + "件に足しました" : "#PRは全部入っていました");
+        else bits.push("商品名＋装飾（#PR入り）で作りました");
+        if (r.reviewed != null) bits.push("レビューで" + r.reviewed + "件を動かしました");
+        if (r.rateUp && r.rateUp.pool) bits.push("料率アップ中の商品を" + r.rateUp.used + "件つかいました（候補" + r.rateUp.pool + "件）");
+        if (r.rank) bits.push(r.rank.days < 3
+          ? "ランキングはまだ" + r.rank.days + "日ぶんなので効かせていません（3日から）"
+          : "ランキング常連の店を" + r.rank.used + "件前に出しました");
+        if (r.season) bits.push(r.season.ready
+          ? "季節外れを" + r.season.used + "件下げました"
+          : "季節はまだ材料が足りません（14日ぶんから）");
+        if (r.presaleUsed) bits.push("先行セールの目玉を" + r.presaleUsed + "件前に出しました");
+        // ★どちらで減ったか分からないと、設定をいじる先を間違える。必ず別々に出す
+        if (r.early) bits.push("まだ売っていない <b>" + r.early + "件</b>は外しました（売り出しの" + ld + "日前から出ます）");
+        if (r.earlyCp) bits.push("クーポンがまだ始まらない <b>" + r.earlyCp + "件</b>は外しました（始まりの" + ld + "日前から出ます）");
+        return bits.join("<br>");
+      }
+
+      let ammoBusy = false;
+      async function ammoGo(kind) {
+        if (ammoBusy) return;
+        // 回っている途中に作り直すと、どこまでやったか分からなくなる
+        const left = S.items.filter((x) => !S.done[x.c] && !S.skip[x.c]).length;
+        if (left > 0 && !confirm("いま " + left + "件 残っています。作り直すと、その残りは消えます。よろしいですか？")) return;
+        ammoBusy = true;
+        $("#ammo-new").disabled = $("#ammo-repost").disabled = true;
+        const n = Math.min(90, Math.max(1, parseInt($("#ammo-n").value, 10) || 90));
+        const lead = Math.min(30, Math.max(0, parseInt($("#ammo-lead").value, 10) || 0));
+        localStorage.setItem("roomPostLead", String(lead));
+        ammoProg("そろえています…", 0, 1);
+        let r = null, err = "";
+        try {
+          r = kind === "new"
+            ? await RoomAmmo.buildNew(n, lead, ammoProg)
+            : await RoomAmmo.buildRepost(n, lead, ammoProg);
+        } catch (e) { err = String((e && e.message) || e); }
+        $("#ammo-new").disabled = $("#ammo-repost").disabled = false;
+        $("#ammo-fill").style.width = "0";
+        ammoBusy = false;
+        if (err) {
+          ammoMsg("そろえられませんでした：" + esc(err)
+            + "<br>電波の届くところで、もう一度押してみてください。だめならMacの拡張から渡す道が残っています。", "err");
+          return;
+        }
+        if (!r || !r.rows.length) {
+          const ld = r && r.lead != null ? r.lead : lead;
+          ammoMsg((kind === "repost"
+            ? "再投稿できる投稿がありませんでした（いいね9以下・4日以上前・固定でない、が条件です）"
+            : "新しい弾が見つかりませんでした。競合の投稿を読み切っているか、直近3日で出し切っています")
+            + (r && r.early ? "／まだ売っていない " + r.early + "件は外しています（売り出しの" + ld + "日前から）" : "")
+            + (r && r.earlyCp ? "／クーポンがまだ始まらない " + r.earlyCp + "件は外しています" : ""), "err");
+          return;
+        }
+        applyList({ at: Date.now(), kind, items: r.rows.map((x) => toItem(x, kind)) });
+        ammoMsg(ammoReport(r, kind), "ok");
+        $("#ammo-box").open = false;
+        showTables();
+      }
+      $("#ammo-new").onclick = () => ammoGo("new");
+      $("#ammo-repost").onclick = () => ammoGo("repost");
+      $("#ammo-lead").value = localStorage.getItem("roomPostLead") || "2";
+
+      // 並べ方の表がいつのものか、棚を何件持っているかを出す。
+      // ★古くても壊れないが、古いことは見えるようにしておく
+      async function showTables() {
+        try {
+          const T = await RoomAmmo.tables();
+          const sh = RoomAmmo.shelfInfo();
+          const bits = [];
+          bits.push("棚 " + (sh && sh.items ? sh.items.length : 0) + "件");
+          bits.push("レビュー表 " + Object.keys(T.revs).length + "件");
+          bits.push("料率アップ表 " + (T.ratesMade || "日付なし"));
+          bits.push(T.rk ? "ランキング " + (T.rk.days || 0) + "日ぶん（" + (T.rk.made || "?") + "）" : "ランキング表なし");
+          $("#ammo-tables").textContent = "並べ方の材料：" + bits.join("／")
+            + "。表はMacが更新したときだけ新しくなります（古くても弾は作れます）。売れた実績は使っていません。";
+        } catch (e) {}
+      }
+
       $("#load-net").onclick = async () => {
         try {
           const r = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
@@ -386,7 +527,9 @@
       };
 
       render();
-      if (!S.items.length) $("#load-net").click();
+      showTables();
+      // ★リストが無いときは「① 弾をそろえる」を開いておく（そこから始まるので表に出す）
+      if (!S.items.length) { $("#ammo-box").open = true; refreshIfNewer(); }
       else refreshIfNewer();
       document.addEventListener("visibilitychange", () => {
         if (!document.hidden) { render(); refreshIfNewer(); }

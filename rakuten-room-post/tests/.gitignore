@@ -1,0 +1,4 @@
+# 録音した本物のAPI応答（38MBほど）。capture.py で作り直せるので置かない
+fixture_api.json
+fixture_names.json
+bg_extract.js
