@@ -467,7 +467,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -530,6 +530,12 @@ function countdown(ms){
   if(ms<=0) return "まもなく";
   const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
   if(h>0) return h+"時間"+m+"分"; if(m>0) return m+"分"+ss+"秒"; return ss+"秒";
+}
+// 24時間管理のカウントダウン：いいねは秒まで出す（枠は秒単位で解けるため）
+function countdown24(which, ms){
+  if(which!=="like" || ms<=0) return countdown(ms);
+  const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;
+  return h>0 ? h+"時間"+m+"分"+ss+"秒" : countdown(ms);
 }
 const todayKey=()=>dateKey(Date.now());
 
@@ -991,7 +997,7 @@ function renderManualRel(which){
   info.className="rel-big "+(done?"done":"wait");
   const sub = done
     ? `✅ 24時間経過（また活動できます）`
-    : `🔔 翌日 ${hm(notifyTs)} に通知（あと${countdown(notifyTs-now)}）`;
+    : `🔔 翌日 ${hm(notifyTs)} に通知（あと${countdown24(which, notifyTs-now)}）`;
   info.innerHTML =
     `<div class="lbl">${CFG[which].emoji} ${CFG[which].name}解除の時間</div>`+
     `<div class="big">${hm(markTs)}</div>`+
@@ -1041,7 +1047,7 @@ function renderRelPlan(which){
     const sub = done
       ? `押した ${hm(it.pressedTs)} ・📅明日 ${hm(it.pressedTs)} に通知`
       : miss ? `未（${dur(now-t)}すぎ）`
-      : `あと ${countdown(t-now)}${it.cal?" ・📅登録済み":""}`;
+      : `あと ${countdown24(which, t-now)}${it.cal?" ・📅登録済み":""}`;
     h+=`<div class="plan-row ${done?"done":miss?"miss":""}">`+
        `<button class="chk" onclick="planCheck('${which}','${it.id}')" title="${done?"チェックを外す":"押したことにする"}">${done?"✅":miss?"⚠️":"⬜"}</button>`+
        `<span class="pt">${it.hm}</span>`+
@@ -1321,7 +1327,7 @@ function renderLimiter(which){
         ? `<span class="nextline">🔁 次に開始できるのは ${relDayHm(resetTs)}${note}</span>` : "");
   }else if(finished && resetTs){
     banner.style.display="block"; banner.className="release-banner done";
-    banner.innerHTML=`🔁 次に開始できる <b>${relDayHm(resetTs)}</b><small>あと ${countdown(resetTs-now)}${note}</small>`;
+    banner.innerHTML=`🔁 次に開始できる <b>${relDayHm(resetTs)}</b><small>あと ${countdown24(which, resetTs-now)}${note}</small>`;
   }else{
     banner.style.display="none";
   }
@@ -1365,7 +1371,7 @@ function renderLimiter(which){
   if(finished){
     btn.disabled=true;
     btn.textContent = validTs(resetTs)
-      ? `🔁 次の開始 ${relDayHm(resetTs)}（あと${countdown(resetTs-now)}）`
+      ? `🔁 次の開始 ${relDayHm(resetTs)}（あと${countdown24(which, resetTs-now)}）`
       : `🔁 本日ぶんは終了`;
   }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
@@ -1443,7 +1449,7 @@ function renderLimiter(which){
     statusEl.className="status-line done";
     statusEl.innerHTML=
       `${heading}<br>`+
-      `🔁 次に開始できる時間：<b>${relDayHm(resetTs)}</b>（あと${countdown(resetTs-now)}）<br>`+
+      `🔁 次に開始できる時間：<b>${relDayHm(resetTs)}</b>（あと${countdown24(which, resetTs-now)}）<br>`+
       `▶️ その時間になると「1回目」から再開できます`+
       ((!spUsed && !st.ended)?`<br><span style="color:var(--muted)">※予備（${cfg.spareCap}）はまだ使えます</span>`:``)+
       `<br><button class="mini-cal" onclick="registerReset('${which}')">📅 開始できる時刻をカレンダーに追加</button>`;
