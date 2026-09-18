@@ -467,7 +467,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -525,6 +525,9 @@ function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 function dateKey(ts){const d=new Date(ts);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function validTs(ts){ return ts!=null && Number.isFinite(+ts) && +ts>0; }   // null/NaN/0 を時刻として扱わない（1970/1/1 9:00 表示の防止）
 function hm(ts){if(!validTs(ts))return "-";const d=new Date(ts);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function hms(ts){if(!validTs(ts))return "-";return hm(ts)+":"+String(new Date(ts).getSeconds()).padStart(2,"0");}
+// 解除の時刻表示：いいねは秒まで（枠は秒単位で解けるため）、フォローは分まで
+function relHm(which, ts){ return which==="like" ? hms(ts) : hm(ts); }
 function dur(ms){const m=Math.max(0,Math.round(ms/60000));return m<60?m+"分":Math.floor(m/60)+"時間"+(m%60)+"分";}
 function countdown(ms){
   if(ms<=0) return "まもなく";
@@ -760,7 +763,7 @@ function endDay(which){
   // セーフティ：1タップ目では終了せず、2.5秒以内にもう一度押されたときだけ確定する
   if(now-endArm[which] >= END_WINDOW){
     endArm[which]=now; render();
-    toast("もう一度タップで本日終了（"+(validTs(rt)?relDayHm(rt):"次のリセット")+"まで開始できなくなります）");
+    toast("もう一度タップで本日終了（"+(validTs(rt)?relDayHm(rt, which):"次のリセット")+"まで開始できなくなります）");
     setTimeout(()=>{ if(Date.now()-endArm[which]>=END_WINDOW){ endArm[which]=0; render(); } }, END_WINDOW+100);
     return;
   }
@@ -793,11 +796,11 @@ function manualNotifyTs(which){ // 通知する時刻＝押した時刻＋24時�
   return t==null ? null : t+DAY;
 }
 // 同じ日ならHH:MMだけ、別日なら「M/D HH:MM」
-function relDayHm(ts){
+function relDayHm(ts, which){
   if(!validTs(ts)) return "-";
   const d=new Date(ts), td=new Date();
   const sameDay = d.getFullYear()===td.getFullYear() && d.getMonth()===td.getMonth() && d.getDate()===td.getDate();
-  return (sameDay?"":(d.getMonth()+1)+"/"+d.getDate()+" ")+hm(ts);
+  return (sameDay?"":(d.getMonth()+1)+"/"+d.getDate()+" ")+(which?relHm(which,ts):hm(ts));
 }
 /* ---------- 今日の解除予定（何時に解除が来るか＝押したかのチェック表） ---------- */
 const PLAN_TOL=30*60000;   // 予定と実際が±30分ならその予定を押したものとみなす
@@ -925,20 +928,20 @@ function doMarkLimit(which, markTs, id){
   // 押した瞬間に「24時間後」のアラームを出す（別途📅を押さなくていい）
   it.cal=true;
   downloadICS(`${cfg.emoji} ${cfg.name} 解除！また活動できます`, markTs+DAY, "楽天ROOM 活動カウンター", "解除アラーム");
-  const calNote="／📅 明日 "+hm(markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
+  const calNote="／📅 明日 "+relHm(which, markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
   if(isFirst){
     state.manualRel[which]={markTs, notified:false};
     st.firstTs=null; st.stages=[]; st.ended=false; st.endedKey=null;   // 今日の1回目からやり直し
     startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
     askNotify(true);
     save(); render();
-    toast(cfg.emoji+" 解除 "+hm(markTs)+" を記録＋1回目を同時刻でスタート"+calNote);
+    toast(cfg.emoji+" 解除 "+relHm(which, markTs)+" を記録＋1回目を同時刻でスタート"+calNote);
   }else{
     // 2回目以降：回数はリセットしない。解除が来た記録だけ残す（明日の予定はこの時刻から作られる）
     if(!state.manualRel[which]) state.manualRel[which]={markTs, notified:false};
     askNotify(true);
     save(); render();
-    toast(cfg.emoji+" 解除 "+hm(markTs)+" を記録（回数はそのまま）"+calNote);
+    toast(cfg.emoji+" 解除 "+relHm(which, markTs)+" を記録（回数はそのまま）"+calNote);
   }
 }
 function clearManualRel(which){
@@ -948,20 +951,21 @@ function clearManualRel(which){
 }
 function editManualRel(which){
   const now=Date.now(), cur=manualMarkTs(which);
-  const shown=hm(cur!=null?cur:now);
-  const inp=prompt(CFG[which].name+"解除の時間を入力（例 "+shown+"）", shown);
+  const shown=relHm(which, cur!=null?cur:now);
+  const ex = which==="like" ? "例 "+shown+"（秒は省略可）" : "例 "+shown;
+  const inp=prompt(CFG[which].name+"解除の時間を入力（"+ex+"）", shown);
   if(inp==null) return;
-  const m=inp.trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).match(/^(\d{1,2})[:：\s]?(\d{2})$/);
-  if(!m){ toast("時刻の形式が読めませんでした（例 14:30）"); return; }
-  const h=+m[1], mi=+m[2];
-  if(h>23||mi>59){ toast("時刻が正しくありません"); return; }
+  const m=inp.trim().replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).match(/^(\d{1,2})[:：\s]?(\d{2})(?:[:：](\d{2}))?$/);
+  if(!m){ toast("時刻の形式が読めませんでした（例 14:30 または 14:30:50）"); return; }
+  const h=+m[1], mi=+m[2], sec=(m[3]!=null && which==="like") ? +m[3] : null;
+  if(h>23||mi>59||(sec!=null&&sec>59)){ toast("時刻が正しくありません"); return; }
   // 入力は前の記録の日付ではなく必ず「今日」基準。未来になる時刻は前日の同時刻とみなす（＝常に直近24時間以内）
-  const d=new Date(now); d.setHours(h,mi,0,0);
+  const d=new Date(now); d.setHours(h,mi,sec!=null?sec:0,0);
   let ts=d.getTime();
   if(ts>now) ts-=DAY;
-  // 今と同じ「分」を入れたときは秒まで今の時刻を使う（23:15:20/23:15:30のような秒ズレで通知が早まらないよう⏰と同じ結果に）
+  // 秒を省いて今と同じ「分」を入れたときは秒まで今の時刻を使う（23:15:20/23:15:30のような秒ズレで通知が早まらないよう⏰と同じ結果に）
   const nd=new Date(now);
-  if(h===nd.getHours() && mi===nd.getMinutes()) ts=now;
+  if(sec==null && h===nd.getHours() && mi===nd.getMinutes()) ts=now;
   if(now-ts>=DAY){ toast("その時刻はもう24時間以上前です。記録しませんでした"); return; }
   if(!state.manualRel) state.manualRel={like:null,follow:null};
   const linked=linkedFirst(which,0);   // 直す前に連動していたか見ておく
@@ -979,13 +983,13 @@ function editManualRel(which){
     note="＋1回目を同時刻でスタート";
   }
   save(); render();
-  toast(CFG[which].name+"解除の時間を "+relDayHm(ts)+" に修正"+note+"（"+relDayHm(ts+DAY)+" に通知）");
+  toast(CFG[which].name+"解除の時間を "+relDayHm(ts,which)+" に修正"+note+"（"+relDayHm(ts+DAY,which)+" に通知）");
 }
 function calManualRel(which){
   const ts=manualNotifyTs(which);
   if(ts==null){ toast("先に「解除の時間を記録」を押してください"); return; }
   downloadICS(`${CFG[which].emoji} ${CFG[which].name} 解除！また活動できます`, ts, "楽天ROOM 活動カウンター", "解除アラーム");
-  toast("📅 翌日 "+hm(ts)+" の解除通知をカレンダーに登録");
+  toast("📅 翌日 "+relHm(which, ts)+" の解除通知をカレンダーに登録");
 }
 function renderManualRel(which){
   const info=document.getElementById(which+"RelInfo");
@@ -997,10 +1001,10 @@ function renderManualRel(which){
   info.className="rel-big "+(done?"done":"wait");
   const sub = done
     ? `✅ 24時間経過（また活動できます）`
-    : `🔔 翌日 ${hm(notifyTs)} に通知（あと${countdown24(which, notifyTs-now)}）`;
+    : `🔔 翌日 ${relHm(which, notifyTs)} に通知（あと${countdown24(which, notifyTs-now)}）`;
   info.innerHTML =
     `<div class="lbl">${CFG[which].emoji} ${CFG[which].name}解除の時間</div>`+
-    `<div class="big">${hm(markTs)}</div>`+
+    `<div class="big">${relHm(which, markTs)}</div>`+
     `<div class="sub">${sub}</div>`+
     `<div class="rel-big-btns">`+
       `<button class="rbtn edit" onclick="editManualRel('${which}')">✏️ 修正</button>`+
@@ -1045,7 +1049,7 @@ function renderRelPlan(which){
   p.items.forEach(it=>{
     const t=planTs(it.hm), done=it.pressedTs!=null, miss=!done && now>t+PLAN_TOL;
     const sub = done
-      ? `押した ${hm(it.pressedTs)} ・📅明日 ${hm(it.pressedTs)} に通知`
+      ? `押した ${relHm(which, it.pressedTs)} ・📅明日 ${relHm(which, it.pressedTs)} に通知`
       : miss ? `未（${dur(now-t)}すぎ）`
       : `あと ${countdown24(which, t-now)}${it.cal?" ・📅登録済み":""}`;
     h+=`<div class="plan-row ${done?"done":miss?"miss":""}">`+
@@ -1156,7 +1160,7 @@ function releaseMsg(which,i){
   if(s.spare) return "予備の枠が終了しました🎉";
   if(s.extra) return "残り枠が終了しました🎉";
   const pos=stdPosOf(which,i);
-  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 次に開始できるのは "+(st.firstTs?relDayHm(resetTsOf(which)):"-");
+  if(pos>=cfg.counts.length) return "規定の枠が終了🎉 次に開始できるのは "+(st.firstTs?relDayHm(resetTsOf(which), which):"-");
   return "解除！"+(pos+1)+"回目（"+cfg.counts[pos]+"）を開始OK";
 }
 function alarmTitleFor(which,i){
@@ -1170,7 +1174,7 @@ function registerStageAlarm(which,i){
     const rt=resetTsOf(which);
     if(rt){
       downloadICS(`${cfg.emoji} ${cfg.name} 解除！また活動できます`, rt, "楽天ROOM 活動カウンター", "解除アラーム");
-      toast("📅 次に開始できる "+relDayHm(rt)+" をカレンダーに登録");
+      toast("📅 次に開始できる "+relDayHm(rt, which)+" をカレンダーに登録");
       return;
     }
   }
@@ -1188,7 +1192,7 @@ function registerReset(which){
   const st=state[which];
   if(!st.firstTs) return;
   downloadICS(`${CFG[which].emoji} ${CFG[which].name}解除！また活動できます`, resetTsOf(which), "楽天ROOM 活動カウンター", "リセットアラーム");
-  toast("📅 次に開始できる "+relDayHm(resetTsOf(which))+" をカレンダーに登録");
+  toast("📅 次に開始できる "+relDayHm(resetTsOf(which), which)+" をカレンダーに登録");
 }
 function toggleCal(el){
   calEnabled=el.checked;
@@ -1282,9 +1286,9 @@ function summaryParts(which){
   if(inWait(which)) return {k:"次の解除", v:hm(st.stages[st.stages.length-1].releaseTs)};
   // その日の枠を使い切っていれば「次に開始できる時刻」を最優先で表示
   const finished = st.firstTs && (st.ended || (standardDone(which)>=CFG[which].counts.length && poolOf(which)<=0));
-  if(finished) return {k:"次に開始", v:relDayHm(resetTsOf(which))};
+  if(finished) return {k:"次に開始", v:relDayHm(resetTsOf(which), which)};
   const mkt=manualMarkTs(which);
-  if(!st.firstTs && mkt!=null && now<mkt+DAY) return {k:"次に開始", v:relDayHm(mkt+DAY)};
+  if(!st.firstTs && mkt!=null && now<mkt+DAY) return {k:"次に開始", v:relDayHm(mkt+DAY, which)};
   if(!st.firstTs) return {k:"状態", v:"未開始"};
   return {k:"状態", v:"開始OK"};
 }
@@ -1296,7 +1300,7 @@ function renderRelSummary(which){
   const mk=manualMarkTs(which), nx=manualResetAfter(which, Date.now()), b=document.getElementById("mark"+cap);
   // 24時間たった記録は nx が null（＝クリア待ち）。未記録として見せる
   if(mk==null || nx==null){ b.textContent="未記録"; b.className="none"; }
-  else{ b.textContent=hm(mk)+" → 次 "+relDayHm(nx); b.className=""; }
+  else{ b.textContent=relHm(which, mk)+" → 次 "+relDayHm(nx, which); b.className=""; }
 }
 
 function renderLimiter(which){
@@ -1324,10 +1328,10 @@ function renderLimiter(which){
     banner.innerHTML=`⏰ 次の解除 <b>${hm(last.releaseTs)}</b><small>あと ${countdown(last.releaseTs-now)}</small>`+
       // 規定の最終回（3回目/8回目）中は、この1時間のあとは翌日の解除まで開始できない
       (isLastStd(which, st.stages.length-1) && resetTs
-        ? `<span class="nextline">🔁 次に開始できるのは ${relDayHm(resetTs)}${note}</span>` : "");
+        ? `<span class="nextline">🔁 次に開始できるのは ${relDayHm(resetTs, which)}${note}</span>` : "");
   }else if(finished && resetTs){
     banner.style.display="block"; banner.className="release-banner done";
-    banner.innerHTML=`🔁 次に開始できる <b>${relDayHm(resetTs)}</b><small>あと ${countdown24(which, resetTs-now)}${note}</small>`;
+    banner.innerHTML=`🔁 次に開始できる <b>${relDayHm(resetTs, which)}</b><small>あと ${countdown24(which, resetTs-now)}${note}</small>`;
   }else{
     banner.style.display="none";
   }
@@ -1371,7 +1375,7 @@ function renderLimiter(which){
   if(finished){
     btn.disabled=true;
     btn.textContent = validTs(resetTs)
-      ? `🔁 次の開始 ${relDayHm(resetTs)}（あと${countdown24(which, resetTs-now)}）`
+      ? `🔁 次の開始 ${relDayHm(resetTs, which)}（あと${countdown24(which, resetTs-now)}）`
       : `🔁 本日ぶんは終了`;
   }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
@@ -1384,11 +1388,11 @@ function renderLimiter(which){
   if(st.ended){
     why.style.display="block";
     why.innerHTML=`🔚 「本日終了」にしたので開始できません`+
-      (validTs(resetTs)?`（このままだと ${relDayHm(resetTs)} まで）`:``)+
+      (validTs(resetTs)?`（このままだと ${relDayHm(resetTs, which)} まで）`:``)+
       `<button onclick="endDay('${which}')">↩︎ 本日終了を取り消して続ける</button>`;
   }else if(finished && stdDone>=total){
     why.style.display="block";
-    why.innerHTML=`🎉 規定${total}回（${dayMax}）を使い切りました。次に開始できるのは ${validTs(resetTs)?relDayHm(resetTs):"-"} です`;
+    why.innerHTML=`🎉 規定${total}回（${dayMax}）を使い切りました。次に開始できるのは ${validTs(resetTs)?relDayHm(resetTs, which):"-"} です`;
   }else{ why.style.display="none"; why.innerHTML=""; }
 
   // 終了ボタン（満了/半分）※本日終了の後でも押せる
@@ -1449,7 +1453,7 @@ function renderLimiter(which){
     statusEl.className="status-line done";
     statusEl.innerHTML=
       `${heading}<br>`+
-      `🔁 次に開始できる時間：<b>${relDayHm(resetTs)}</b>（あと${countdown24(which, resetTs-now)}）<br>`+
+      `🔁 次に開始できる時間：<b>${relDayHm(resetTs, which)}</b>（あと${countdown24(which, resetTs-now)}）<br>`+
       `▶️ その時間になると「1回目」から再開できます`+
       ((!spUsed && !st.ended)?`<br><span style="color:var(--muted)">※予備（${cfg.spareCap}）はまだ使えます</span>`:``)+
       `<br><button class="mini-cal" onclick="registerReset('${which}')">📅 開始できる時刻をカレンダーに追加</button>`;
