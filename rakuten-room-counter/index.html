@@ -464,7 +464,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-23（いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-10-23（いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1323,7 +1323,10 @@ function renderLimiter(which){
   let stdSeen=0;
   st.stages.forEach((s,i)=>{
     const li=document.createElement("li"); li.className="stage-item";
-    const released=now>=s.releaseTs;
+    // いいねの3回目のあとは1時間ではなく24時間の解除（＝次に開始できる時刻）を出す
+    const rt24 = (which==="like" && isLastStd(which,i)) ? resetTsOf(which) : null;
+    const relTs = validTs(rt24) ? rt24 : s.releaseTs;
+    const released=now>=relTs;
     const label = s.spare ? "予備" : s.extra ? "追加" : (++stdSeen)+"回目";
     const cnt = s.edited
       ? `<span class="cnt ${countedOf(s)>=s.cap?"full":"halfc"}">✏️手入力 ${countedOf(s)}${countedOf(s)>=s.cap?"":"/"+s.cap}</span>`
@@ -1339,13 +1342,13 @@ function renderLimiter(which){
     const tail = released
       ? `<span class="tail done">解除済み</span>`+finBtn+
         `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+editBtn
-      : `<span class="tail wait">⏳ あと${countdown(s.releaseTs-now)}</span>`+finBtn+
+      : `<span class="tail wait">⏳ あと${rt24 ? countdown24(which, relTs-now) : countdown(relTs-now)}</span>`+finBtn+
         `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+editBtn+
         `<button class="mini-cal" onclick="reRegisterStage('${which}',${i})">📅</button>`;
     if(!released) li.className+=" active";
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
-      `<span class="time"><span class="nw">開始 ${relHm(which, s.startTs)}</span> <span class="nw">→ 解除 ${relHm(which, s.releaseTs)}</span>`+
+      `<span class="time"><span class="nw">開始 ${relHm(which, s.startTs)}</span> <span class="nw">→ ${rt24 ? "🔁24h解除 "+relDayHm(relTs, which) : "解除 "+relHm(which, s.releaseTs)}</span>`+
       `<br>${cnt}</span>`+tail;
     list.appendChild(li);
   });
