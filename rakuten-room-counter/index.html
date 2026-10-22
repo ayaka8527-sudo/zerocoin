@@ -43,6 +43,7 @@
   .quicknav{display:flex;gap:6px;margin-top:8px}
   .quicknav button{flex:1;background:#fff;color:var(--rakuten);border:none;border-radius:9px;
     padding:8px 2px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .quicknav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .quicknav button:active{transform:scale(.95)}
   .date{font-size:13px;opacity:.95}
   .streak{font-size:13px;font-weight:700;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px}
@@ -297,8 +298,8 @@
     </div>
   </div>
   <div class="quicknav">
-    <button onclick="jumpTo('secLike')">❤️いいね</button>
-    <button onclick="jumpTo('secFollow')">👥フォロー</button>
+    <button id="navLike" onclick="navPress('like')">❤️いいね</button>
+    <button id="navFollow" onclick="navPress('follow')">👥フォロー</button>
     <button onclick="jumpTo('secCal')">🗓️カレンダー</button>
   </div>
 </header>
@@ -464,7 +465,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-23（いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-10-23（上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -504,6 +505,20 @@ let state = migrate(load());
 let chartRange = 7;
 let calMonth = new Date(); calMonth.setDate(1);
 function reloadLatest(){ location.href = location.pathname + "?v=" + Date.now(); }
+// クイックナビの❤️👥＝開始ボタン。開始できないとき（解除待ち・本日ぶん終了）はカードへ飛ぶだけ
+function navPress(which){
+  const b=document.getElementById(which+"Btn");
+  if(b && !b.disabled) press(which);
+  else jumpTo(which==="like"?"secLike":"secFollow");
+}
+function renderNav(which){
+  const nb=document.getElementById(which==="like"?"navLike":"navFollow"); if(!nb) return;
+  const cfg=CFG[which], st=state[which], b=document.getElementById(which+"Btn"), now=Date.now();
+  if(b && !b.disabled) nb.textContent=`${cfg.emoji} ${standardDone(which)+1}回目を開始`;
+  else if(inWait(which)) nb.textContent=`⏳ あと${countdown(st.stages[st.stages.length-1].releaseTs-now)}`;
+  else if(st.firstTs && validTs(resetTsOf(which))) nb.textContent=`🔁 ${relDayHm(resetTsOf(which), which)}`;
+  else nb.textContent=`${cfg.emoji}${cfg.name}`;
+}
 function jumpTo(id){
   const el=document.getElementById(id); if(!el) return;
   const header=document.querySelector("header");
@@ -1253,6 +1268,7 @@ function render(){
   document.getElementById("date").textContent=`${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日(${wd})`;
   document.getElementById("streak").textContent="🔥 連続"+streak()+"日";
   renderLimiter("like"); renderLimiter("follow");
+  renderNav("like"); renderNav("follow");
   renderManualRel("like"); renderManualRel("follow");
   renderRelBtns("like"); renderRelBtns("follow");
   renderRelPlan("like"); renderRelPlan("follow");
