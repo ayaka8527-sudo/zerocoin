@@ -464,7 +464,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-23（いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの24時間解除を秒まで表示・カレンダー登録／0時のフォロー・フォロワー数を自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-10-23（いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1161,17 +1161,8 @@ function registerStageAlarm(which,i){
     ev={title:alarmTitleFor(which,i), whenMs:s.releaseTs};
     msg="解除アラーム";
   }
-  if(which!=="like"){
-    downloadICS(ev.title, ev.whenMs, "楽天ROOM 活動カウンター", "解除アラーム");
-    toast("📅 "+msg+" をカレンダーに登録");
-    return;
-  }
-  // いいねは開始＋24時間（秒まで）の解除も同じ1枚に入れる＝タップ1回で2件とも登録
-  const t24=s.startTs+DAY;
-  const evs=[ev, {title:`${cfg.emoji} ${cfg.name} 24時間解除（${hms(s.startTs)}開始の回）`, whenMs:t24}];
-  evs.forEach((e,k)=>{ e.uid="rrc-"+e.whenMs+"-"+k+"-"+Math.random().toString(36).slice(2)+"@rakuten-room"; e.desc="楽天ROOM 活動カウンター"; });
-  downloadICSMulti(evs, "解除アラーム");
-  toast("📅 "+msg+"＋24時間解除 "+relDayHm(t24, which)+" をカレンダーに登録");
+  downloadICS(ev.title, ev.whenMs, "楽天ROOM 活動カウンター", "解除アラーム");
+  toast("📅 "+msg+" をカレンダーに登録");
 }
 function calLater(which){
   const st=state[which], s=st.stages[st.stages.length-1];
@@ -1355,8 +1346,6 @@ function renderLimiter(which){
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
       `<span class="time"><span class="nw">開始 ${relHm(which, s.startTs)}</span> <span class="nw">→ 解除 ${relHm(which, s.releaseTs)}</span>`+
-      // いいねは1件ずつ24時間後に枠へ戻るので、開始＋24時間も秒まで出す
-      (which==="like" ? `<br><span class="nw">🕛24h解除 ${relDayHm(s.startTs+DAY, which)}</span>` : ``)+
       `<br>${cnt}</span>`+tail;
     list.appendChild(li);
   });
