@@ -464,7 +464,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-23（いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-10-23（いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1677,7 +1677,13 @@ async function syncRoomStats(){
     let n=0;
     Object.keys(days).forEach(k=>{
       const d=days[k];
-      if(state.statsManual[k] || d==null || d.followers==null || d.following==null) return;
+      if(d==null) return;
+      // 投稿数は台帳の数でそろえる（手の記録より正確なので、手で入れた日も置き換える）
+      if(d.posts!=null){
+        if(!state.daily[k]) state.daily[k]={likes:0,follows:0,posts:0};
+        if(state.daily[k].posts!==d.posts){ state.daily[k].posts=d.posts; n++; }
+      }
+      if(state.statsManual[k] || d.followers==null || d.following==null) return;
       if(state.followers[k]===d.followers && state.following[k]===d.following && state.statsAuto[k]) return;
       // 手入力があった日は、上書きする前の値を一度だけ控える
       if(!state.statsAuto[k] && !state.statsBackup[k] && (state.followers[k]!=null || state.following[k]!=null))
@@ -1688,7 +1694,7 @@ async function syncRoomStats(){
       const k=todayKey();
       ["fcInput","fgInput"].forEach(id=>{ const el=document.getElementById(id); if(el && document.activeElement!==el) el.value=""; });
       save(); render();
-      if(days[k]) toast("🕛 0時の数を自動入力：フォロワー "+fmtNum(days[k].followers)+" ／ フォロー "+fmtNum(days[k].following));
+      if(days[k] && days[k].followers!=null) toast("🕛 自動入力：フォロワー "+fmtNum(days[k].followers)+" ／ フォロー "+fmtNum(days[k].following)+(days[k].posts!=null?" ／ 今日の投稿 "+days[k].posts:""));
     }
   }catch(e){}
 }
