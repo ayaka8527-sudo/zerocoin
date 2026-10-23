@@ -465,7 +465,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -595,9 +595,7 @@ function manualResetAfter(which, afterTs){
 function resetTsOf(which){
   const st=state[which];
   if(!st.firstTs) return null;
-  let t=manualResetAfter(which, st.firstTs);
-  // いいねは「今日の解除予定」（前日に解除を押した時刻＋24時間）が次の解除。1回目の開始＋24時間ではない
-  if(t==null && which==="like") t=planDueAfter(which, st.firstTs);
+  let t = which==="like" ? likeCycleEnd() : manualResetAfter(which, st.firstTs);
   if(t==null) t=st.firstTs+DAY;
   if(st.stages.length){
     const last=st.stages[st.stages.length-1];
@@ -609,16 +607,24 @@ function resetTsOf(which){
 function resetFromManual(which){
   const st=state[which];
   if(!st.firstTs) return false;
-  let t=manualResetAfter(which, st.firstTs);
-  if(t==null && which==="like") t=planDueAfter(which, st.firstTs);
+  const t = which==="like" ? likeCycleEnd() : manualResetAfter(which, st.firstTs);
   if(t==null) return false;
   return t===resetTsOf(which);
 }
+// いいねの今の回（1〜3回目）が終わる時刻＝いいね解除。
+// 解除を押したあとに始めた回なら「押した時刻＋24時間」。押す前から続いている回（予定より早く押した等）なら、
+// その回のぶんの解除予定（前日に押した時刻＋24時間）。どちらも無ければ null（呼び出し側で1回目＋24時間）
+function likeCycleEnd(){
+  const st=state.like, mk=manualMarkTs("like");
+  if(!st.firstTs) return null;
+  if(mk!=null && st.firstTs>=mk) return mk+DAY;
+  return planDueAfter("like", st.firstTs, true);
+}
 // まだ押していない解除予定のうち、起点より後でいちばん早い時刻（秒まで持っていればその時刻）
-function planDueAfter(which, afterTs){
+function planDueAfter(which, afterTs, includePressed){
   let best=null;
   planOf(which).items.forEach(it=>{
-    if(it.pressedTs!=null) return;
+    if(it.pressedTs!=null && !includePressed) return;
     const t=planDue(it);
     if(t>afterTs && (best==null || t<best)) best=t;
   });
@@ -937,7 +943,7 @@ function markLimit(which,id){
     relArm[which]={id, ts:now};
     const st=state[which], it=planOf(which).items.find(x=>x.id===id);
     const at=it?it.hm+"の解除を":"解除を";
-    toast(planPressedCount(which)>0
+    toast((planPressedCount(which)>0 || which==="like")
       ? "もう一度タップで"+at+"記録（今日の回数はそのまま）"
       : (st.stages.length
           ? "もう一度タップで"+at+"記録（今日の"+st.stages.length+"回分は1回目に戻ります）"
@@ -961,12 +967,13 @@ function doMarkLimit(which, markTs, id){
   const calNote="／📅 明日 "+relHm(which, markTs+DAY)+" の通知を登録（カレンダーで「追加」を押してください）";
   if(isFirst){
     state.manualRel[which]={markTs, notified:false};
-    st.firstTs=null; st.stages=[]; st.ended=false; st.endedKey=null;   // 今日の1回目からやり直し
+    // いいねは予定より早く押しても、続いている回の記録は消さない（その回はもとのいいね解除で終わる）
+    if(which!=="like"){ st.firstTs=null; st.stages=[]; st.ended=false; st.endedKey=null; }   // 今日の1回目からやり直し
     // いいねは解除を押したら1回目は好きなときに開始（24時間は解除を押した時刻から数える）。フォローは従来どおり同時刻で開始
     if(which!=="like") startFirstAt(which, markTs);
     askNotify(true);
     save(); render();
-    toast(cfg.emoji+" 解除 "+hms(markTs)+" を記録"+(which==="like"?"（1回目はいつでも開始できます）":"＋1回目を同時刻でスタート")+calNote);
+    toast(cfg.emoji+" 解除 "+hms(markTs)+" を記録"+(which==="like"?(st.stages.length?"（今の回の記録はそのまま）":"（1回目はいつでも開始できます）"):"＋1回目を同時刻でスタート")+calNote);
   }else{
     // 2回目以降：回数はリセットしない。解除が来た記録だけ残す（明日の予定はこの時刻から作られる）
     if(!state.manualRel[which]) state.manualRel[which]={markTs, notified:false};
