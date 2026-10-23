@@ -465,7 +465,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-23（上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -908,7 +908,7 @@ function markLimit(which,id){
       ? "もう一度タップで"+at+"記録（今日の回数はそのまま）"
       : (st.stages.length
           ? "もう一度タップで"+at+"記録（今日の"+st.stages.length+"回分は1回目に戻ります）"
-          : "もう一度タップで"+at+"記録（1回目がこの時刻で始まります）"));
+          : "もう一度タップで"+at+"記録"+(which==="like"?"":"（1回目がこの時刻で始まります）")));
     render();
     setTimeout(()=>{ if(Date.now()-relArm[which].ts>=REL_WINDOW){ relArm[which]={id:null,ts:0}; render(); } }, REL_WINDOW+100);
     return;
@@ -929,10 +929,11 @@ function doMarkLimit(which, markTs, id){
   if(isFirst){
     state.manualRel[which]={markTs, notified:false};
     st.firstTs=null; st.stages=[]; st.ended=false; st.endedKey=null;   // 今日の1回目からやり直し
-    startFirstAt(which, markTs);                     // 解除＝1回目の開始。同じ時刻でスタートする
+    // いいねは解除を押したら1回目は好きなときに開始（24時間は解除を押した時刻から数える）。フォローは従来どおり同時刻で開始
+    if(which!=="like") startFirstAt(which, markTs);
     askNotify(true);
     save(); render();
-    toast(cfg.emoji+" 解除 "+relHm(which, markTs)+" を記録＋1回目を同時刻でスタート"+calNote);
+    toast(cfg.emoji+" 解除 "+hms(markTs)+" を記録"+(which==="like"?"（1回目はいつでも開始できます）":"＋1回目を同時刻でスタート")+calNote);
   }else{
     // 2回目以降：回数はリセットしない。解除が来た記録だけ残す（明日の予定はこの時刻から作られる）
     if(!state.manualRel[which]) state.manualRel[which]={markTs, notified:false};
@@ -975,7 +976,7 @@ function editManualRel(which){
     recordStage(which, f, dateKey(ts), countedOf(f));
     st.firstTs=Math.min.apply(null, st.stages.map(x=>x.startTs));
     note="＋1回目も同じ時刻に";
-  }else if(st.stages.length===0){                // 回がないなら同時刻で1回目を開始
+  }else if(st.stages.length===0 && which!=="like"){   // 回がないなら同時刻で1回目を開始（いいねは自分で開始）
     startFirstAt(which, ts);
     note="＋1回目を同時刻でスタート";
   }
@@ -1045,8 +1046,13 @@ function renderRelPlan(which){
   }
   p.items.forEach(it=>{
     const t=planTs(it.hm), done=it.pressedTs!=null, miss=!done && now>t+PLAN_TOL;
+    const r24 = done ? it.pressedTs+DAY : null;
     const sub = done
-      ? `押した ${relHm(which, it.pressedTs)} ・📅明日 ${relHm(which, it.pressedTs)} に通知`
+      ? (which==="like"
+          ? (now<r24
+              ? `押した ${hms(it.pressedTs)} → 🔁24h解除 ${relDayHm(r24, which)}（あと ${countdown24(which, r24-now)}）`
+              : `押した ${hms(it.pressedTs)} → ✅ 24時間経過（${relDayHm(r24, which)}）`)
+          : `押した ${relHm(which, it.pressedTs)} ・📅明日 ${relHm(which, it.pressedTs)} に通知`)
       : miss ? `未（${dur(now-t)}すぎ）`
       : `あと ${countdown24(which, t-now)}${it.cal?" ・📅登録済み":""}`;
     h+=`<div class="plan-row ${done?"done":miss?"miss":""}">`+
