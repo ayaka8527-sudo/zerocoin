@@ -336,12 +336,12 @@
    "following": 60722,
    "ts": "2026-09-02 00:00:01",
    "posts": 69,
-   "likesGiven": 74,
+   "likesGiven": 73,
    "likesGivenRough": true
   },
   "2026-09-03": {
    "posts": 118,
-   "likesGiven": 63,
+   "likesGiven": 62,
    "likesGivenRough": true
   },
   "2026-09-04": {
@@ -373,7 +373,7 @@
    "following": 60202,
    "ts": "2026-09-07 00:00:00",
    "posts": 29,
-   "likesGiven": 31,
+   "likesGiven": 30,
    "likesGivenRough": true
   },
   "2026-09-08": {
@@ -421,7 +421,7 @@
    "following": 62478,
    "ts": "2026-09-13 00:00:05",
    "posts": 27,
-   "likesGiven": 73,
+   "likesGiven": 72,
    "likesGivenRough": true
   },
   "2026-09-14": {
@@ -437,7 +437,7 @@
    "following": 45747,
    "ts": "2026-09-15 00:00:01",
    "posts": 1,
-   "likesGiven": 44,
+   "likesGiven": 43,
    "likesGivenRough": true
   },
   "2026-09-16": {
@@ -533,7 +533,7 @@
    "following": 39159,
    "ts": "2026-09-27 00:00:00",
    "posts": 148,
-   "likesGiven": 213,
+   "likesGiven": 212,
    "likesGivenRough": true
   },
   "2026-09-28": {
@@ -541,7 +541,7 @@
    "following": 39452,
    "ts": "2026-09-28 00:00:04",
    "posts": 52,
-   "likesGiven": 412,
+   "likesGiven": 409,
    "likesGivenRough": true
   },
   "2026-09-29": {
@@ -557,7 +557,7 @@
    "following": 39739,
    "ts": "2026-09-30 00:00:00",
    "posts": 1,
-   "likesGiven": 261,
+   "likesGiven": 255,
    "likesGivenRough": true
   },
   "2026-10-01": {
@@ -565,7 +565,7 @@
    "following": 39928,
    "ts": "2026-10-01 00:00:04",
    "posts": 5,
-   "likesGiven": 203,
+   "likesGiven": 201,
    "likesGivenRough": true
   },
   "2026-10-02": {
@@ -843,9 +843,9 @@
    "following": 52052,
    "ts": "2026-11-01 00:00:04",
    "posts": 1,
-   "likesGiven": 579,
+   "likesGiven": 597,
    "likesGivenRough": true,
-   "likesGot": 111
+   "likesGot": 170
   }
  }
 }
