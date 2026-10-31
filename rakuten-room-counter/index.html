@@ -213,6 +213,10 @@
   .tot-head{text-align:center;font-size:12px;font-weight:800;color:var(--muted);
     margin:14px 0 4px;border-top:1px dashed #eadfe4;padding-top:10px}
   #chart2{height:150px}
+  .cal-lk{text-align:center;font-size:9px;font-weight:800;line-height:1.2;margin-top:1px}
+  .cal-lk .lg{color:#d6336c} .cal-lk .lr{color:#e67e22}
+  .lk-box{margin-top:10px;background:#fff6f8;border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.6}
+  .lk-box b{font-size:15px} .lk-box .lk-note{font-size:11px;color:#888}
   .cal-fc{text-align:center;font-size:9px;font-weight:800;color:#8e44ad;line-height:1.2;margin-top:1px}
   .c-fc{color:#8e44ad}
   .c-fcd{display:block;font-size:9.5px}
@@ -328,6 +332,7 @@
       </div>
     </div>
     <button class="fc-save-big" onclick="saveFollowerCount()">💾 保存する</button>
+    <div class="lk-box" id="lkBox" style="display:none"></div>
     <div class="notice">実数で入力：24109（24,109 とカンマ入りでもOK）。17.3 のように小数で書くと今まで通りK扱い（＝17,300）。同じ日に入れ直すと上書き。推移はグラフカードで見られます。</div>
   </div>
 
@@ -413,6 +418,8 @@
     <div class="legend">
       <span><i style="background:var(--like)"></i>❤いいね</span>
       <span><i style="background:var(--follow)"></i>👥フォロー</span>
+      <span><i style="background:#d6336c"></i>🫶実際にしたいいね（≈は目安）</span>
+      <span><i style="background:#e67e22"></i>💗もらったいいね</span>
       <span><i style="background:var(--post)"></i>📝投稿</span>
     </div>
   </div>
@@ -465,7 +472,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-11-01（実際にしたいいね🫶ともらったいいね💗を日別に自動表示）／2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -489,6 +496,7 @@ function migrate(s){
   if(!s.statsAuto) s.statsAuto={};     // dateKey -> true：0時の数（フォロワーウォッチ）で入れた日
   if(!s.statsManual) s.statsManual={}; // dateKey -> true：自動のあとに手で直した日（自動で上書きしない）
   if(!s.statsBackup) s.statsBackup={}; // dateKey -> {followers, following}：自動で上書きする前の手入力
+  if(!s.likeAct) s.likeAct={};         // dateKey -> {g:した数, gr:目安, r:もらった数, rs:取りこぼしあり}（Macから自動）
   return s;
 }
 // 2026-10-23 フォローは開始だけで満了になった。切り替え時に今日開いたままの回だけ満了にそろえる
@@ -1634,7 +1642,7 @@ function renderCalendar(){
   const grid=document.getElementById("calGrid"); grid.innerHTML="";
   for(let i=0;i<startWd;i++){ const c=document.createElement("div"); c.className="cal-cell empty"; grid.appendChild(c); }
   const tk=todayKey();
-  let ml=0,mf=0,mp=0;
+  let ml=0,mf=0,mp=0,mg=0,mr=0;
   const fkeys=[];
   for(let d=1; d<=days; d++){
     const key=dateKey(new Date(y,m,d).getTime());
@@ -1658,7 +1666,17 @@ function renderCalendar(){
          (fd!=null?`<span class="c-fcd ${fd>=0?"up":"down"}">${fmtNumDelta(fd)}</span>`:``)+
          `</div>`;
     }
-    c.innerHTML=`<div class="cal-day">${d}</div>${counts}${fc}`;
+    let lk="";
+    const la=state.likeAct[key];
+    if(la && (la.g!=null || la.r!=null)){
+      if(la.g!=null){ mg+=la.g; }
+      if(la.r!=null){ mr+=la.r; }
+      lk=`<div class="cal-lk">`+
+         (la.g!=null?`<div class="lg">🫶${la.gr?"≈":""}${fmtNum(la.g)}</div>`:``)+
+         (la.r!=null?`<div class="lr">💗${fmtNum(la.r)}${la.rs?"?":""}</div>`:``)+
+         `</div>`;
+    }
+    c.innerHTML=`<div class="cal-day">${d}</div>${counts}${lk}${fc}`;
     grid.appendChild(c);
   }
   let fcTotal="";
@@ -1670,7 +1688,8 @@ function renderCalendar(){
     fcTotal=`　<span class="c-fc">👤${fmtNumDelta(net)}</span>`;
   }
   document.getElementById("calTotal").innerHTML=
-    `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`+fcTotal;
+    `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`+fcTotal+
+    (mg||mr?`<br>いいね　<span style="color:#d6336c">🫶した ${fmtNum(mg)}</span>　<span style="color:#e67e22">💗もらった ${fmtNum(mr)}</span>`:``);
 }
 
 /* ---------- フォロワー数の記録 ---------- */
@@ -1741,6 +1760,20 @@ function renderFollowerCard(){
   }else{
     badge.textContent="未入力"; badge.className="badge warn";
   }
+  renderLikeAct();
+}
+// いいねの実数（Macのいいね台帳とお知らせ欄から。投稿数と同じく1件ずつ数えた数）
+function renderLikeAct(){
+  const box=document.getElementById("lkBox");
+  const y=new Date(); y.setDate(y.getDate()-1);
+  const row=(label,k)=>{
+    const a=state.likeAct[k];
+    if(!a || (a.g==null && a.r==null)) return "";
+    return `<div>${label}　🫶した <b>${a.g!=null?(a.gr?"≈":"")+fmtNum(a.g):"—"}</b>　💗もらった <b>${a.r!=null?fmtNum(a.r):"—"}</b>${a.rs?" ⚠️取りこぼしあり":""}</div>`;
+  };
+  const html=row("昨日",dateKey(y.getTime()))+row("今日（ここまで）",todayKey());
+  box.style.display=html?"":"none";
+  if(html) box.innerHTML=html+`<div class="lk-note">相手や自分が投稿を消しても減らない、実際の数（Macから4時間ごとに更新）。≈は台帳を始める前の目安</div>`;
 }
 
 /* ---------- 0時のフォロー/フォロワー数（Macのフォロワーウォッチが room_stats.json を置く） ---------- */
@@ -1757,6 +1790,10 @@ async function syncRoomStats(){
       if(d.posts!=null){
         if(!state.daily[k]) state.daily[k]={likes:0,follows:0,posts:0};
         if(state.daily[k].posts!==d.posts){ state.daily[k].posts=d.posts; n++; }
+      }
+      if(d.likesGiven!=null || d.likesGot!=null){
+        const a={g:d.likesGiven??null, gr:!!d.likesGivenRough, r:d.likesGot??null, rs:!!d.likesGotShort};
+        if(JSON.stringify(state.likeAct[k])!==JSON.stringify(a)){ state.likeAct[k]=a; n++; }
       }
       if(state.statsManual[k] || d.followers==null || d.following==null) return;
       if(state.followers[k]===d.followers && state.following[k]===d.following && state.statsAuto[k]) return;
