@@ -842,10 +842,17 @@
    "followers": 33160,
    "following": 52052,
    "ts": "2026-11-01 00:00:04",
-   "posts": 1,
-   "likesGiven": 797,
+   "posts": 101,
+   "likesGiven": 798,
    "likesGivenRough": true,
-   "likesGot": 893
+   "likesGot": 1288
+  },
+  "2026-11-02": {
+   "followers": 33333,
+   "following": 52619,
+   "ts": "2026-11-02 00:00:05",
+   "posts": 1,
+   "likesGot": 19
   }
  }
 }
