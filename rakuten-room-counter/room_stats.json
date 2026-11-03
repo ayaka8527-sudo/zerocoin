@@ -591,7 +591,7 @@
    "following": 41392,
    "ts": "2026-10-04 00:00:00",
    "posts": 167,
-   "likesGiven": 678,
+   "likesGiven": 677,
    "likesGivenRough": true,
    "likesGot": 1645
   },
@@ -859,9 +859,16 @@
    "followers": 33510,
    "following": 53148,
    "ts": "2026-11-03 00:00:03",
-   "posts": 40,
-   "likesGiven": 795,
-   "likesGot": 928
+   "posts": 119,
+   "likesGiven": 796,
+   "likesGot": 1309
+  },
+  "2026-11-04": {
+   "followers": 33704,
+   "following": 53917,
+   "ts": "2026-11-04 00:00:00",
+   "posts": 1,
+   "likesGot": 8
   }
  }
 }
