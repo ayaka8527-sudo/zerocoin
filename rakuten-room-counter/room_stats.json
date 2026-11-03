@@ -853,15 +853,15 @@
    "ts": "2026-11-02 00:00:05",
    "posts": 161,
    "likesGiven": 797,
-   "likesGot": 1254,
-   "likesGotShort": true
+   "likesGot": 1390
   },
   "2026-11-03": {
    "followers": 33510,
    "following": 53148,
    "ts": "2026-11-03 00:00:03",
-   "posts": 1,
-   "likesGiven": 795
+   "posts": 40,
+   "likesGiven": 795,
+   "likesGot": 928
   }
  }
 }
