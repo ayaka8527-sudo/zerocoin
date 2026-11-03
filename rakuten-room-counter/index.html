@@ -339,18 +339,17 @@
   <!-- いいね -->
   <div class="card like" id="secLike">
     <div class="card-head"><span class="emoji">❤️</span><span class="title">いいね</span><span class="badge" id="likeBadge"></span></div>
-    <div class="progress-num"><b id="likeDone">0</b> / 3 回　（300＋300＋200＝800）</div>
+    <div class="progress-num"><b id="likeDone">0</b> / 3 回</div>
     <div class="meter"><span id="likeMeter" style="width:0%"></span></div>
     <div class="rel-input" id="likeRelBtns"></div>
     <div class="plan-box" id="likeRelPlan"></div>
     <div id="likeRelInfo" style="display:none"></div>
     <div class="release-banner" id="likeBanner" style="display:none"></div>
     <div class="cal-nudge" id="likeCalNudge" style="display:none"></div>
-    <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始（300）</button>
+    <button class="start-btn" id="likeBtn" onclick="press('like')">❤️ 1回目を開始</button>
     <div class="why" id="likeWhy" style="display:none"></div>
-    <button class="finish-btn" id="likeFinishBtn" onclick="finishStage('like')" style="display:none">✅ 終了する</button>
     <div class="sub-btns">
-      <button class="sub-btn spare" id="likeSpareBtn" onclick="pressSpare('like')">＋予備で開始（200）</button>
+      <button class="sub-btn spare" id="likeSpareBtn" onclick="pressSpare('like')">＋予備で開始</button>
       <button class="sub-btn cancel" id="likeCancelBtn" onclick="cancelLast('like')">↩︎ 直前を取消</button>
     </div>
     <button class="end-day-btn" id="likeEndBtn" onclick="endDay('like')">🔚 本日終了にする</button>
@@ -361,31 +360,22 @@
   <!-- フォロー -->
   <div class="card follow" id="secFollow">
     <div class="card-head"><span class="emoji">👥</span><span class="title">フォロー</span><span class="badge" id="followBadge"></span></div>
-    <div class="progress-num"><b id="followDone">0</b> / 8 回　（100×8＝800）</div>
+    <div class="progress-num"><b id="followDone">0</b> / 8 回</div>
     <div class="meter"><span id="followMeter" style="width:0%"></span></div>
     <div class="rel-input" id="followRelBtns"></div>
     <div class="plan-box" id="followRelPlan"></div>
     <div id="followRelInfo" style="display:none"></div>
     <div class="release-banner" id="followBanner" style="display:none"></div>
     <div class="cal-nudge" id="followCalNudge" style="display:none"></div>
-    <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始（100）</button>
+    <button class="start-btn" id="followBtn" onclick="press('follow')">👥 1回目を開始</button>
     <div class="why" id="followWhy" style="display:none"></div>
     <div class="sub-btns">
-      <button class="sub-btn spare" id="followSpareBtn" onclick="pressSpare('follow')">＋予備で開始（100）</button>
+      <button class="sub-btn spare" id="followSpareBtn" onclick="pressSpare('follow')">＋予備で開始</button>
       <button class="sub-btn cancel" id="followCancelBtn" onclick="cancelLast('follow')">↩︎ 直前を取消</button>
     </div>
     <button class="end-day-btn" id="followEndBtn" onclick="endDay('follow')">🔚 本日終了にする</button>
     <ul class="stage-list" id="followStages"></ul>
     <div class="status-line ok" id="followStatus">開始ボタンを押すと記録スタート</div>
-  </div>
-
-  <!-- 今日の合計 -->
-  <div class="card">
-    <div class="card-head"><span class="emoji">📒</span><span class="title">今日の合計</span></div>
-    <div class="totals">
-      <div><div class="t-num" style="color:var(--like)" id="todayLike">0</div><div class="t-lab">いいね</div></div>
-      <div><div class="t-num" style="color:var(--follow)" id="todayFollow">0</div><div class="t-lab">フォロー</div></div>
-    </div>
   </div>
 
   <!-- フォロワー / フォロー数の推移グラフ -->
@@ -472,7 +462,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-11-01（実際にしたいいね🫶ともらったいいね💗を日別に自動表示）／2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-11-04（いいね・フォローは開始時刻の記録だけ・回数は数えない）／2026-11-01（実際にしたいいね🫶ともらったいいね💗を日別に自動表示）／2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -508,6 +498,12 @@ function migrateFollowOpen(){
       recordStage("follow", x, x.dayKey, x.cap);
     }
   });
+}
+// 2026-11-04 数えなくなったので、終了待ちのまま残っている回は閉じる（計上済みの数はそのまま）
+function closeOpenStages(){
+  ["like","follow"].forEach(w=>state[w].stages.forEach(x=>{
+    if(!x.finished && !x.closed && !x.edited){ x.finished=true; x.closed=true; x.noCount=true; }
+  }));
 }
 let state = migrate(load());
 let chartRange = 7;
@@ -660,9 +656,11 @@ function inWait(which){
 }
 function standardDone(which){ return state[which].stages.filter(s=>!s.spare&&!s.extra).length; }
 function spareUsed(which){ return state[which].stages.some(s=>s.spare); }
-// 開始時の計上：いいねは0（「終了」で満了）／フォローは開始だけで満了
-function startCount(which,cap){ return which==="like" ? 0 : cap; }
-function startDone(which){ return which!=="like"; }
+// 2026-11-04〜 いいね・フォローは開始時刻を記録するだけで数えない（数はMacの台帳・フォロワーウォッチで別に集計）
+const NO_COUNT_FROM="2026-11-04";
+function countsShown(k){ return k<NO_COUNT_FROM; }   // ❤/👥の日別の数を出すのはこの日より前だけ
+function startCount(which,cap){ return 0; }
+function startDone(which){ return true; }
 function countedOf(s){ return s.counted!=null ? s.counted : s.cap; }
 
 function press(which){
@@ -680,9 +678,7 @@ function press(which){
   askNotify(true);
   save(); render();
   if(calEnabled) registerStageAlarm(which, st.stages.length-1);
-  toast(which==="like"
-    ? cfg.emoji+" "+standardDone(which)+"回目スタート "+hms(now)+"。終わったら「終了」で"+cap+"をカウント"
-    : cfg.emoji+" "+standardDone(which)+"回目スタート（＋"+cap+"）。解除は "+hm(now+HOUR));
+  toast(cfg.emoji+" "+standardDone(which)+"回目スタート "+relHm(which, now)+"。解除は "+relHm(which, now+HOUR));
 }
 function pressSpare(which){
   maybeReset(which);
@@ -699,7 +695,7 @@ function pressSpare(which){
   askNotify(true);
   save(); render();
   if(calEnabled) registerStageAlarm(which, st.stages.length-1);
-  toast(cfg.emoji+" 予備をスタート"+(which==="like"?"（終了で"+cap+"）":"（＋"+cap+"）")+"。解除は "+relHm(which, now+HOUR));
+  toast(cfg.emoji+" 予備をスタート。解除は "+relHm(which, now+HOUR));
 }
 function editStartTime(which,i){
   const st=state[which]; const s=st.stages[i]; if(!s) return;
@@ -758,7 +754,7 @@ function finishStage(which,i){
   if(st.stages.length===0){ toast("開始していません"); return; }
   const s=st.stages[i!=null ? i : st.stages.length-1];
   if(!s) return;
-  if(which!=="like"){ toast("フォローは開始だけでカウント済みです"); return; }
+  toast("開始だけ記録しています（数は別で集計）"); return;
   if(s.finished){ toast("この回は終了済みです"); return; }
   s.counted=s.cap; s.finished=true; s.closed=true;
   recordStage(which, s, todayKey(), s.cap);   // 満了数を「終了を押した日」にまとめて計上
@@ -1212,7 +1208,7 @@ function releaseMsg(which,i){
   if(s.extra) return "残り枠が終了しました🎉";
   const pos=stdPosOf(which,i);
   if(pos>=cfg.counts.length) return "規定の枠が終了🎉 次に開始できるのは "+(st.firstTs?relDayHm(resetTsOf(which), which):"-");
-  return "解除！"+(pos+1)+"回目（"+cfg.counts[pos]+"）を開始OK";
+  return "解除！"+(pos+1)+"回目を開始OK";
 }
 function alarmTitleFor(which,i){
   return `${CFG[which].emoji} ${CFG[which].name} `+releaseMsg(which,i);
@@ -1363,10 +1359,8 @@ function renderLimiter(which){
   const cfg=CFG[which], st=state[which], now=Date.now();
   const total=cfg.counts.length;
   const stdDone=standardDone(which), spUsed=spareUsed(which), waiting=inWait(which);
-  const countedTotal=st.stages.reduce((a,s)=>a+countedOf(s),0);
-  const dayMax=cfg.counts.reduce((a,b)=>a+b,0);
   document.getElementById(which+"Done").textContent=stdDone+(spUsed?"+予備":"");
-  document.getElementById(which+"Meter").style.width=Math.min(100,countedTotal/dayMax*100)+"%";
+  document.getElementById(which+"Meter").style.width=Math.min(100,stdDone/total*100)+"%";
 
   // 開始していなければ「終了」にはならない（summaryParts と同じ条件にそろえる）
   const finished = !!st.firstTs && (st.ended || (stdDone>=total && !waiting));
@@ -1407,17 +1401,15 @@ function renderLimiter(which){
     const relTs = validTs(rt24) ? rt24 : s.releaseTs;
     const released=now>=relTs;
     const label = s.spare ? "予備" : s.extra ? "追加" : (++stdSeen)+"回目";
-    const cnt = s.edited
+    const cnt = true ? ""   // 2026-11-04〜 回ごとの数は出さない（下は旧表示）
+      : s.edited
       ? `<span class="cnt ${countedOf(s)>=s.cap?"full":"halfc"}">✏️手入力 ${countedOf(s)}${countedOf(s)>=s.cap?"":"/"+s.cap}</span>`
       : s.finished
         ? `<span class="cnt full">✅満了 ${countedOf(s)}</span>`
         : s.closed
           ? `<span class="cnt halfc">🌓半分で確定 ${countedOf(s)}/${s.cap}</span>`   // 旧仕様で確定した回
           : `<span class="cnt halfc">⏳終了待ち ${countedOf(s)}/${s.cap}</span>`;
-    // いいねで終了を押していない回は、その行からも終了できる（次の回を始めたあとでも直せるように）
-    const finBtn = (which==="like" && !s.finished && !s.closed && !s.edited)
-      ? `<button class="mini-cal" onclick="finishStage('${which}',${i})" title="この回を終了（${s.cap}をカウント）">✅</button>` : "";
-    const editBtn=`<button class="mini-cal" onclick="editCount('${which}',${i})" title="この回の数を手入力">✏️</button>`;
+    const finBtn="", editBtn="";   // 2026-11-04〜 数えないので終了・数の手入力は出さない
     const tail = released
       ? `<span class="tail done">解除済み</span>`+finBtn+
         `<button class="mini-cal" onclick="editStartTime('${which}',${i})">🕐</button>`+editBtn
@@ -1428,13 +1420,13 @@ function renderLimiter(which){
     if(s.spare) li.className+=" spare";
     li.innerHTML=`<span class="no">${label}</span>`+
       `<span class="time"><span class="nw">開始 ${relHm(which, s.startTs)}</span> <span class="nw">→ ${rt24 ? "🔁24h解除 "+relDayHm(relTs, which) : "解除 "+relHm(which, s.releaseTs)}</span>`+
-      `<br>${cnt}</span>`+tail;
+      (cnt?`<br>${cnt}`:``)+`</span>`+tail;
     list.appendChild(li);
   });
   for(let k=stdSeen;k<total;k++){
     const li=document.createElement("li"); li.className="stage-item pending";
     li.innerHTML=`<span class="no">${k+1}回目</span><span class="time">未開始</span>`+
-      `<span class="tail">（${cfg.counts[k]}）</span>`;
+      `<span class="tail"></span>`;
     list.appendChild(li);
   }
 
@@ -1449,7 +1441,7 @@ function renderLimiter(which){
   else if(waiting && likeNextRel(which)){ btn.disabled=true; btn.textContent=`🔁 いいね解除まで ${countdown24(which, likeNextRel(which)-now)}`; }
   else if(waiting){ btn.disabled=true; btn.textContent=`⏳ 解除まで ${countdown(st.stages[st.stages.length-1].releaseTs-now)}`; }
   else if(stdDone>=total){ btn.disabled=true; btn.textContent=`規定 ${total}回 完了`; }
-  else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始（${cfg.counts[stdDone]}）`; }
+  else{ btn.disabled=false; btn.textContent=`${cfg.emoji} ${stdDone+1}回目を開始`; }
   btn.classList.toggle("compact", btn.disabled);
 
   // 押せないときは理由と出口を出す（無効なボタンの文言だけでは理由が分からないため）
@@ -1461,7 +1453,7 @@ function renderLimiter(which){
       `<button onclick="endDay('${which}')">↩︎ 本日終了を取り消して続ける</button>`;
   }else if(finished && stdDone>=total){
     why.style.display="block";
-    why.innerHTML=`🎉 規定${total}回（${dayMax}）を使い切りました。次に開始できるのは ${validTs(resetTs)?relDayHm(resetTs, which):"-"} です`;
+    why.innerHTML=`🎉 規定${total}回を使い切りました。次に開始できるのは ${validTs(resetTs)?relDayHm(resetTs, which):"-"} です`;
   }else{ why.style.display="none"; why.innerHTML=""; }
 
   // 終了ボタン（いいねだけ。フォローは開始でカウント済み）※本日終了の後でも押せる
@@ -1479,7 +1471,7 @@ function renderLimiter(which){
   if(finished){ sp.disabled=true; sp.textContent= spUsed?"予備：使用済み":"本日終了"; }
   else if(spUsed){ sp.disabled=true; sp.textContent="予備：使用済み"; }
   else if(waiting){ sp.disabled=true; sp.textContent="＋予備（待機中）"; }
-  else{ sp.disabled=false; sp.textContent=`＋予備で開始（${cfg.spareCap}）`; }
+  else{ sp.disabled=false; sp.textContent=`＋予備で開始`; }
   // ヘッダーの⏰も2回タップの武装状態を共有（ボタン本体は renderRelBtns が描く）
   const hm2=document.getElementById(which+"HeadMark");
   if(hm2) hm2.classList.toggle("armed", now-relArm[which].ts < REL_WINDOW);
@@ -1518,7 +1510,7 @@ function renderLimiter(which){
       `${heading}<br>`+
       `🔁 次に開始できる時間：<b>${relDayHm(resetTs, which)}</b>（あと${countdown24(which, resetTs-now)}）<br>`+
       `▶️ その時間になると「1回目」から再開できます`+
-      ((!spUsed && !st.ended)?`<br><span style="color:var(--muted)">※予備（${cfg.spareCap}）はまだ使えます</span>`:``)+
+      ((!spUsed && !st.ended)?`<br><span style="color:var(--muted)">※予備はまだ使えます</span>`:``)+
       `<br><button class="mini-cal" onclick="registerReset('${which}')">📅 開始できる時刻をカレンダーに追加</button>`;
   }else if(waiting){
     const last=st.stages[st.stages.length-1];
@@ -1543,8 +1535,9 @@ function renderLimiter(which){
 
 function renderToday(){
   const k=todayKey();
+  const el=document.getElementById("todayLike"); if(!el) return;   // 今日の合計カードは2026-11-04に廃止
   const d=state.daily[k]||{likes:0,follows:0,posts:0};
-  document.getElementById("todayLike").textContent=d.likes;
+  el.textContent=d.likes;
   document.getElementById("todayFollow").textContent=d.follows;
 }
 
@@ -1649,11 +1642,12 @@ function renderCalendar(){
     const e=state.daily[key];
     const c=document.createElement("div"); c.className="cal-cell"+(key===tk?" today":"");
     let counts="";
-    if(e && (e.likes||e.follows||e.posts)){
-      ml+=e.likes; mf+=e.follows; mp+=e.posts;
+    const lf=e&&countsShown(key) ? {l:e.likes||0, f:e.follows||0} : {l:0, f:0};
+    if(e && (lf.l||lf.f||e.posts)){
+      ml+=lf.l; mf+=lf.f; mp+=e.posts;
       counts=`<div class="cal-counts">`+
-        (e.likes?`<span class="c-like">❤${e.likes}</span>`:``)+
-        (e.follows?`<span class="c-follow">👥${e.follows}</span>`:``)+
+        (lf.l?`<span class="c-like">❤${lf.l}</span>`:``)+
+        (lf.f?`<span class="c-follow">👥${lf.f}</span>`:``)+
         (e.posts?`<span class="c-post">📝${e.posts}</span>`:``)+
       `</div>`;
     }
@@ -1688,7 +1682,7 @@ function renderCalendar(){
     fcTotal=`　<span class="c-fc">👤${fmtNumDelta(net)}</span>`;
   }
   document.getElementById("calTotal").innerHTML=
-    `この月の合計　<span class="c-like">❤${ml}</span>　<span class="c-follow">👥${mf}</span>　<span class="c-post">📝${mp}</span>`+fcTotal+
+    `この月の合計　`+(ml?`<span class="c-like">❤${ml}</span>　`:``)+(mf?`<span class="c-follow">👥${mf}</span>　`:``)+`<span class="c-post">📝${mp}</span>`+fcTotal+
     (mg||mr?`<br>いいね　<span style="color:#d6336c">🫶した ${fmtNum(mg)}</span>　<span style="color:#e67e22">💗もらった ${fmtNum(mr)}</span>`:``);
 }
 
@@ -1840,7 +1834,7 @@ window.addEventListener("resize", ()=>{ renderChart2(); });
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ watch(); render(); syncRoomStats(); } });
 window.addEventListener("focus", ()=>{ watch(); render(); });
 document.getElementById("calToggle").checked = calEnabled;
-migrateFollowOpen(); save();
+migrateFollowOpen(); closeOpenStages(); save();
 syncRoomStats();
 watch();
 render();
