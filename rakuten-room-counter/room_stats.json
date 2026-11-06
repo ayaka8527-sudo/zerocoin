@@ -413,7 +413,7 @@
    "following": 61916,
    "ts": "2026-09-12 00:00:01",
    "posts": 6,
-   "likesGiven": 40,
+   "likesGiven": 39,
    "likesGivenRough": true
   },
   "2026-09-13": {
@@ -549,7 +549,7 @@
    "following": 39646,
    "ts": "2026-09-29 00:00:02",
    "posts": 1,
-   "likesGiven": 25,
+   "likesGiven": 24,
    "likesGivenRough": true
   },
   "2026-09-30": {
@@ -573,7 +573,7 @@
    "following": 40334,
    "ts": "2026-10-02 00:00:01",
    "posts": 40,
-   "likesGiven": 121,
+   "likesGiven": 119,
    "likesGivenRough": true,
    "likesGot": 1052
   },
@@ -582,7 +582,7 @@
    "following": 40900,
    "ts": "2026-10-03 00:00:02",
    "posts": 119,
-   "likesGiven": 204,
+   "likesGiven": 198,
    "likesGivenRough": true,
    "likesGot": 1232
   },
@@ -591,7 +591,7 @@
    "following": 41392,
    "ts": "2026-10-04 00:00:00",
    "posts": 167,
-   "likesGiven": 154,
+   "likesGiven": 148,
    "likesGivenRough": true,
    "likesGot": 1645
   },
@@ -600,7 +600,7 @@
    "following": 42065,
    "ts": "2026-10-05 00:00:00",
    "posts": 165,
-   "likesGiven": 125,
+   "likesGiven": 114,
    "likesGivenRough": true,
    "likesGot": 1426
   },
@@ -609,7 +609,7 @@
    "following": 42512,
    "ts": "2026-10-06 00:00:01",
    "posts": 114,
-   "likesGiven": 382,
+   "likesGiven": 289,
    "likesGivenRough": true,
    "likesGot": 1631
   },
@@ -884,8 +884,8 @@
    "following": 50994,
    "ts": "2026-11-06 00:00:00",
    "posts": 1,
-   "likesGiven": 597,
-   "likesGot": 203
+   "likesGiven": 796,
+   "likesGot": 888
   }
  },
  "rival": {
@@ -897,11 +897,16 @@
    "2026-11-06 01": 51312,
    "2026-11-06 02": 51311,
    "2026-11-06 03": 51310,
-   "2026-11-06 04": 51310
+   "2026-11-06 04": 51310,
+   "2026-11-06 05": 51310,
+   "2026-11-06 06": 51310,
+   "2026-11-06 07": 51310,
+   "2026-11-06 08": 51310,
+   "2026-11-06 09": 51310
   },
-  "at": "2026-11-06 04:05",
+  "at": "2026-11-06 18:36",
   "yesterdayText": "昨日まで：差 17,272人",
-  "closeText": "（縮み方は記録が半日ぶんたまると出ます）",
-  "rateText": ""
+  "closeText": "（1日 −105ずつ縮まり中 → 4/20ごろ追いつく）",
+  "rateText": "1日あたり：自分 +167／みえ +62（直近0.8日）"
  }
 }
