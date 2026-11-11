@@ -397,7 +397,7 @@
    "following": 61823,
    "ts": "2026-09-10 00:00:04",
    "posts": 1,
-   "likesGiven": 72,
+   "likesGiven": 71,
    "likesGivenRough": true
   },
   "2026-09-11": {
@@ -413,7 +413,7 @@
    "following": 61916,
    "ts": "2026-09-12 00:00:01",
    "posts": 6,
-   "likesGiven": 38,
+   "likesGiven": 37,
    "likesGivenRough": true
   },
   "2026-09-13": {
@@ -509,7 +509,7 @@
    "following": 38248,
    "ts": "2026-09-24 00:00:00",
    "posts": 1,
-   "likesGiven": 101,
+   "likesGiven": 99,
    "likesGivenRough": true
   },
   "2026-09-25": {
@@ -533,7 +533,7 @@
    "following": 39159,
    "ts": "2026-09-27 00:00:00",
    "posts": 148,
-   "likesGiven": 118,
+   "likesGiven": 117,
    "likesGivenRough": true
   },
   "2026-09-28": {
@@ -549,7 +549,7 @@
    "following": 39646,
    "ts": "2026-09-29 00:00:02",
    "posts": 1,
-   "likesGiven": 21,
+   "likesGiven": 20,
    "likesGivenRough": true
   },
   "2026-09-30": {
@@ -557,7 +557,7 @@
    "following": 39739,
    "ts": "2026-09-30 00:00:00",
    "posts": 1,
-   "likesGiven": 84,
+   "likesGiven": 83,
    "likesGivenRough": true
   },
   "2026-10-01": {
@@ -573,7 +573,7 @@
    "following": 40334,
    "ts": "2026-10-02 00:00:01",
    "posts": 40,
-   "likesGiven": 90,
+   "likesGiven": 88,
    "likesGivenRough": true,
    "likesGot": 1052
   },
@@ -582,7 +582,7 @@
    "following": 40900,
    "ts": "2026-10-03 00:00:02",
    "posts": 119,
-   "likesGiven": 143,
+   "likesGiven": 142,
    "likesGivenRough": true,
    "likesGot": 1232
   },
@@ -591,7 +591,7 @@
    "following": 41392,
    "ts": "2026-10-04 00:00:00",
    "posts": 167,
-   "likesGiven": 79,
+   "likesGiven": 77,
    "likesGivenRough": true,
    "likesGot": 1645
   },
@@ -600,7 +600,7 @@
    "following": 42065,
    "ts": "2026-10-05 00:00:00",
    "posts": 165,
-   "likesGiven": 45,
+   "likesGiven": 44,
    "likesGivenRough": true,
    "likesGot": 1426
   },
@@ -609,7 +609,7 @@
    "following": 42512,
    "ts": "2026-10-06 00:00:01",
    "posts": 114,
-   "likesGiven": 89,
+   "likesGiven": 87,
    "likesGivenRough": true,
    "likesGot": 1631
   },
@@ -618,7 +618,7 @@
    "following": 43127,
    "ts": "2026-10-07 00:00:00",
    "posts": 182,
-   "likesGiven": 103,
+   "likesGiven": 90,
    "likesGivenRough": true,
    "likesGot": 1579
   },
@@ -627,7 +627,7 @@
    "following": 43391,
    "ts": "2026-10-08 00:00:04",
    "posts": 145,
-   "likesGiven": 108,
+   "likesGiven": 94,
    "likesGivenRough": true,
    "likesGot": 1555
   },
@@ -636,7 +636,7 @@
    "following": 43598,
    "ts": "2026-10-09 00:00:00",
    "posts": 152,
-   "likesGiven": 169,
+   "likesGiven": 159,
    "likesGivenRough": true,
    "likesGot": 1570
   },
@@ -645,7 +645,7 @@
    "following": 43952,
    "ts": "2026-10-10 00:00:00",
    "posts": 1,
-   "likesGiven": 572,
+   "likesGiven": 488,
    "likesGivenRough": true,
    "likesGot": 1163
   },
@@ -654,7 +654,7 @@
    "following": 44048,
    "ts": "2026-10-11 00:00:02",
    "posts": 2,
-   "likesGiven": 144,
+   "likesGiven": 95,
    "likesGivenRough": true,
    "likesGot": 971
   },
@@ -923,19 +923,15 @@
    "followers": 34734,
    "following": 44693,
    "ts": "2026-11-11 00:00:04",
-   "posts": 1,
-   "likesGiven": 796,
-   "likesGot": 104
+   "posts": 41,
+   "likesGiven": 797,
+   "likesGot": 425
   }
  },
  "rival": {
   "id": "1000002164863223",
   "name": "みえ",
   "hours": {
-   "2026-11-08 08": 51530,
-   "2026-11-08 09": 51530,
-   "2026-11-08 10": 51530,
-   "2026-11-08 11": 51530,
    "2026-11-08 12": 51547,
    "2026-11-08 13": 51547,
    "2026-11-08 14": 51547,
@@ -1004,11 +1000,15 @@
    "2026-11-11 05": 51788,
    "2026-11-11 06": 51788,
    "2026-11-11 07": 51788,
-   "2026-11-11 08": 51790
+   "2026-11-11 08": 51790,
+   "2026-11-11 09": 51804,
+   "2026-11-11 10": 51807,
+   "2026-11-11 11": 51807,
+   "2026-11-11 12": 51825
   },
-  "at": "2026-11-11 08:05",
+  "at": "2026-11-11 12:05",
   "yesterdayText": "昨日まで：差 17,056人（1日で 128人縮まった）",
-  "closeText": "（1日 −56ずつ縮まり中 → 9/12ごろ追いつく）",
-  "rateText": "1日あたり：自分 +145／みえ +89（直近5.4日）"
+  "closeText": "（1日 −51ずつ縮まり中 → 10/12ごろ追いつく）",
+  "rateText": "1日あたり：自分 +144／みえ +93（直近5.5日）"
  }
 }
