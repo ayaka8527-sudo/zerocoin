@@ -53,6 +53,8 @@
   .card-head .emoji{font-size:22px}
   .card-head .title{font-size:16px;font-weight:800}
   .card-head .badge{margin-left:auto;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .fc-badges{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 10px}
+  .fc-badges .badge{font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap}
   .badge.ok{background:#eafaf0;color:var(--ok)}
   .badge.warn{background:#fff3e6;color:var(--warn)}
   .badge.bad{background:#fdecea;color:var(--bad)}
@@ -319,7 +321,8 @@
 
   <!-- フォロワー・フォロー数 -->
   <div class="card">
-    <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー・フォロー数</span><span class="badge warn" id="fcDelta">未入力</span></div>
+    <div class="card-head"><span class="emoji">👤</span><span class="title">今日のフォロワー・フォロー数</span></div>
+    <div class="fc-badges"><span class="badge warn" id="fcDelta">未入力</span><span class="badge ok" id="fcWeek" style="display:none"></span></div>
     <div class="fc-routine">📌 毎日ルーティン：0コレ → いいねを「待機中」にする</div>
     <div class="fc-grid">
       <div class="fc-field">
@@ -462,7 +465,7 @@ const CFG = {
   follow: { counts:[100,100,100,100,100,100,100,100], spareCap:100, emoji:"👥", name:"フォロー", color:"--follow" }
 };
 const KEY="rakuten_room_counter_v3";
-const APP_VERSION="2026-11-04（いいね・フォローは開始時刻の記録だけ・回数は数えない）／2026-11-01（実際にしたいいね🫶ともらったいいね💗を日別に自動表示）／2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
+const APP_VERSION="2026-11-15（フォロワー数に日曜からの増えを表示）／2026-11-04（いいね・フォローは開始時刻の記録だけ・回数は数えない）／2026-11-01（実際にしたいいね🫶ともらったいいね💗を日別に自動表示）／2026-10-24（いいね3回目のあとはいいね解除の時刻と残りを表示／解除予定の⬜は押した瞬間から24時間を秒まで・早く押しても今の回の記録は消さない）／2026-10-23（いいねの24時間は解除予定を押した時刻から・秒まで表示／解除を押しても1回目は自動で始めない／上の❤️👥ボタンで開始できるように／いいね3回目の行は24時間の解除を表示／いいね＝開始は記録だけ・終了で300/300/200／フォロー＝開始だけで100／半分と残りのボタンを廃止／いいねの開始時刻を秒まで表示／0時のフォロー・フォロワー数を自動入力／その日の投稿数を投稿台帳から自動入力）／2026-09-18（いいね解除の時刻を秒まで表示・修正入力も秒対応）／2026-09-16（いいねの24時間の残りを秒まで表示）／2026-08-23（本日終了を2回タップ式に／前日の本日終了は自動で解く／押せない理由と取り消しボタンを表示／いいねを300・300・200に）";
 
 function migrate(s){
   ["like","follow"].forEach(w=>{ if(s[w]&&s[w].stages) s[w].stages.forEach(x=>{
@@ -1701,6 +1704,19 @@ function followerDelta(key){
   const p=prevFollowerVal(key);
   return (v!=null && p!=null) ? v-p : null;
 }
+// 直前の日曜（今日が日曜なら先週の日曜）の0時の数からの増え。0時どうしの差なので「日曜〜昨日」の増え
+function sundayKeyBefore(key){
+  const [y,m,d]=key.split("-").map(Number);
+  const dt=new Date(y,m-1,d);
+  dt.setDate(dt.getDate()-(dt.getDay()===0?7:dt.getDay()));
+  return dateKey(dt.getTime());
+}
+function followerWeekDelta(key){
+  const v=state.followers[key];
+  const sk=sundayKeyBefore(key);
+  const p=state.followers[sk];
+  return (v!=null && p!=null) ? {d:v-p, sk} : null;
+}
 function fmtNum(n){ return Math.round(n).toLocaleString("en-US"); }        // 24109 → 24,109
 function fmtNumDelta(d){ return (d<0?"-":"+")+fmtNum(Math.abs(d)); }
 function parseKInput(str){
@@ -1754,6 +1770,14 @@ function renderFollowerCard(){
   }else{
     badge.textContent="未入力"; badge.className="badge warn";
   }
+  const wk=document.getElementById("fcWeek");
+  const w=followerWeekDelta(k);
+  if(w){
+    const [,mm,dd]=w.sk.split("-").map(Number);
+    wk.textContent=mm+"/"+dd+"(日)から "+fmtNumDelta(w.d);
+    wk.className="badge "+(w.d<0?"bad":"ok");
+    wk.style.display="";
+  }else wk.style.display="none";
   renderLikeAct();
 }
 // いいねの実数（Macのいいね台帳とお知らせ欄から。投稿数と同じく1件ずつ数えた数）
