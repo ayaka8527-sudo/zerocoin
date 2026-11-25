@@ -549,7 +549,7 @@
    "following": 39646,
    "ts": "2026-09-29 00:00:02",
    "posts": 1,
-   "likesGiven": 14,
+   "likesGiven": 13,
    "likesGivenRough": true
   },
   "2026-09-30": {
@@ -591,7 +591,7 @@
    "following": 41392,
    "ts": "2026-10-04 00:00:00",
    "posts": 167,
-   "likesGiven": 46,
+   "likesGiven": 45,
    "likesGivenRough": true,
    "likesGot": 1645
   },
@@ -609,7 +609,7 @@
    "following": 42512,
    "ts": "2026-10-06 00:00:01",
    "posts": 114,
-   "likesGiven": 38,
+   "likesGiven": 37,
    "likesGivenRough": true,
    "likesGot": 1631
   },
@@ -618,7 +618,7 @@
    "following": 43127,
    "ts": "2026-10-07 00:00:00",
    "posts": 182,
-   "likesGiven": 30,
+   "likesGiven": 29,
    "likesGivenRough": true,
    "likesGot": 1579
   },
@@ -627,7 +627,7 @@
    "following": 43391,
    "ts": "2026-10-08 00:00:04",
    "posts": 145,
-   "likesGiven": 41,
+   "likesGiven": 40,
    "likesGivenRough": true,
    "likesGot": 1555
   },
@@ -645,7 +645,7 @@
    "following": 43952,
    "ts": "2026-10-10 00:00:00",
    "posts": 1,
-   "likesGiven": 142,
+   "likesGiven": 140,
    "likesGivenRough": true,
    "likesGot": 1163
   },
@@ -681,7 +681,7 @@
    "following": 45026,
    "ts": "2026-10-14 00:00:01",
    "posts": 168,
-   "likesGiven": 94,
+   "likesGiven": 93,
    "likesGivenRough": true,
    "likesGot": 1504
   },
@@ -690,7 +690,7 @@
    "following": 45123,
    "ts": "2026-10-15 00:00:00",
    "posts": 1,
-   "likesGiven": 67,
+   "likesGiven": 66,
    "likesGivenRough": true,
    "likesGot": 1249
   },
@@ -708,7 +708,7 @@
    "following": 45851,
    "ts": "2026-10-17 00:00:00",
    "posts": 143,
-   "likesGiven": 86,
+   "likesGiven": 83,
    "likesGivenRough": true,
    "likesGot": 1206
   },
@@ -717,7 +717,7 @@
    "following": 46239,
    "ts": "2026-10-18 00:00:04",
    "posts": 1,
-   "likesGiven": 89,
+   "likesGiven": 87,
    "likesGivenRough": true,
    "likesGot": 1106
   },
@@ -726,7 +726,7 @@
    "following": 46597,
    "ts": "2026-10-19 00:00:01",
    "posts": 1,
-   "likesGiven": 101,
+   "likesGiven": 97,
    "likesGivenRough": true,
    "likesGot": 1342
   },
@@ -735,7 +735,7 @@
    "following": 46793,
    "ts": "2026-10-20 00:00:00",
    "posts": 79,
-   "likesGiven": 85,
+   "likesGiven": 77,
    "likesGivenRough": true,
    "likesGot": 1451
   },
@@ -744,7 +744,7 @@
    "following": 47104,
    "ts": "2026-10-21 00:00:02",
    "posts": 1,
-   "likesGiven": 138,
+   "likesGiven": 119,
    "likesGivenRough": true,
    "likesGot": 1241
   },
@@ -760,7 +760,7 @@
    "following": 47392,
    "ts": "2026-10-23 00:00:01",
    "posts": 1,
-   "likesGiven": 297,
+   "likesGiven": 231,
    "likesGivenRough": true,
    "likesGot": 813
   },
@@ -769,7 +769,7 @@
    "following": 47730,
    "ts": "2026-10-24 00:00:01",
    "posts": 1,
-   "likesGiven": 265,
+   "likesGiven": 193,
    "likesGivenRough": true,
    "likesGot": 1116
   },
@@ -778,7 +778,7 @@
    "following": 48313,
    "ts": "2026-10-25 00:00:04",
    "posts": 166,
-   "likesGiven": 439,
+   "likesGiven": 334,
    "likesGivenRough": true,
    "likesGot": 1439
   },
@@ -1035,17 +1035,13 @@
    "ts": "2026-11-25 00:00:01",
    "posts": 58,
    "likesGiven": 799,
-   "likesGot": 136
+   "likesGot": 589
   }
  },
  "rival": {
   "id": "1000002164863223",
   "name": "みえ",
   "hours": {
-   "2026-11-22 08": 52670,
-   "2026-11-22 09": 52670,
-   "2026-11-22 10": 52670,
-   "2026-11-22 11": 52670,
    "2026-11-22 12": 52677,
    "2026-11-22 13": 52677,
    "2026-11-22 14": 52678,
@@ -1114,11 +1110,15 @@
    "2026-11-25 05": 52744,
    "2026-11-25 06": 52744,
    "2026-11-25 07": 52744,
-   "2026-11-25 08": 52746
+   "2026-11-25 08": 52746,
+   "2026-11-25 09": 52746,
+   "2026-11-25 10": 52746,
+   "2026-11-25 11": 52746,
+   "2026-11-25 12": 52751
   },
-  "at": "2026-11-25 08:05",
+  "at": "2026-11-25 12:04",
   "yesterdayText": "昨日まで：差 15,781人（1日で 207人縮まった）",
-  "closeText": "（1日 −99ずつ縮まり中 → 5/4ごろ追いつく）",
-  "rateText": "1日あたり：自分 +161／みえ +62（直近7日）"
+  "closeText": "（1日 −101ずつ縮まり中 → 4/30ごろ追いつく）",
+  "rateText": "1日あたり：自分 +159／みえ +58（直近6.8日）"
  }
 }
