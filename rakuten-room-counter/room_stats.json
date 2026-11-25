@@ -200,7 +200,7 @@
    "following": 55183,
    "ts": "2026-08-16 00:00:01",
    "posts": 77,
-   "likesGiven": 24,
+   "likesGiven": 23,
    "likesGivenRough": true
   },
   "2026-08-17": {
@@ -304,7 +304,7 @@
    "following": 60297,
    "ts": "2026-08-29 00:00:00",
    "posts": 130,
-   "likesGiven": 43,
+   "likesGiven": 42,
    "likesGivenRough": true
   },
   "2026-08-30": {
@@ -336,12 +336,12 @@
    "following": 60722,
    "ts": "2026-09-02 00:00:01",
    "posts": 69,
-   "likesGiven": 61,
+   "likesGiven": 60,
    "likesGivenRough": true
   },
   "2026-09-03": {
    "posts": 118,
-   "likesGiven": 45,
+   "likesGiven": 43,
    "likesGivenRough": true
   },
   "2026-09-04": {
@@ -389,7 +389,7 @@
    "following": 61185,
    "ts": "2026-09-09 00:00:02",
    "posts": 21,
-   "likesGiven": 41,
+   "likesGiven": 40,
    "likesGivenRough": true
   },
   "2026-09-10": {
@@ -413,7 +413,7 @@
    "following": 61916,
    "ts": "2026-09-12 00:00:01",
    "posts": 6,
-   "likesGiven": 29,
+   "likesGiven": 28,
    "likesGivenRough": true
   },
   "2026-09-13": {
@@ -469,7 +469,7 @@
    "following": 36091,
    "ts": "2026-09-19 00:00:02",
    "posts": 18,
-   "likesGiven": 44,
+   "likesGiven": 43,
    "likesGivenRough": true
   },
   "2026-09-20": {
@@ -477,7 +477,7 @@
    "following": 36558,
    "ts": "2026-09-20 00:00:00",
    "posts": 1,
-   "likesGiven": 24,
+   "likesGiven": 22,
    "likesGivenRough": true
   },
   "2026-09-21": {
@@ -493,7 +493,7 @@
    "following": 37581,
    "ts": "2026-09-22 00:00:03",
    "posts": 1,
-   "likesGiven": 31,
+   "likesGiven": 30,
    "likesGivenRough": true
   },
   "2026-09-23": {
@@ -509,7 +509,7 @@
    "following": 38248,
    "ts": "2026-09-24 00:00:00",
    "posts": 1,
-   "likesGiven": 73,
+   "likesGiven": 72,
    "likesGivenRough": true
   },
   "2026-09-25": {
@@ -573,7 +573,7 @@
    "following": 40334,
    "ts": "2026-10-02 00:00:01",
    "posts": 40,
-   "likesGiven": 46,
+   "likesGiven": 44,
    "likesGivenRough": true,
    "likesGot": 1052
   },
@@ -591,7 +591,7 @@
    "following": 41392,
    "ts": "2026-10-04 00:00:00",
    "posts": 167,
-   "likesGiven": 45,
+   "likesGiven": 44,
    "likesGivenRough": true,
    "likesGot": 1645
   },
@@ -609,7 +609,7 @@
    "following": 42512,
    "ts": "2026-10-06 00:00:01",
    "posts": 114,
-   "likesGiven": 37,
+   "likesGiven": 36,
    "likesGivenRough": true,
    "likesGot": 1631
   },
@@ -618,7 +618,7 @@
    "following": 43127,
    "ts": "2026-10-07 00:00:00",
    "posts": 182,
-   "likesGiven": 29,
+   "likesGiven": 28,
    "likesGivenRough": true,
    "likesGot": 1579
   },
@@ -627,7 +627,7 @@
    "following": 43391,
    "ts": "2026-10-08 00:00:04",
    "posts": 145,
-   "likesGiven": 40,
+   "likesGiven": 39,
    "likesGivenRough": true,
    "likesGot": 1555
   },
@@ -636,7 +636,7 @@
    "following": 43598,
    "ts": "2026-10-09 00:00:00",
    "posts": 152,
-   "likesGiven": 39,
+   "likesGiven": 38,
    "likesGivenRough": true,
    "likesGot": 1570
   },
@@ -645,7 +645,7 @@
    "following": 43952,
    "ts": "2026-10-10 00:00:00",
    "posts": 1,
-   "likesGiven": 140,
+   "likesGiven": 137,
    "likesGivenRough": true,
    "likesGot": 1163
   },
@@ -672,7 +672,7 @@
    "following": 44738,
    "ts": "2026-10-13 00:00:00",
    "posts": 190,
-   "likesGiven": 61,
+   "likesGiven": 59,
    "likesGivenRough": true,
    "likesGot": 1499
   },
@@ -681,7 +681,7 @@
    "following": 45026,
    "ts": "2026-10-14 00:00:01",
    "posts": 168,
-   "likesGiven": 93,
+   "likesGiven": 91,
    "likesGivenRough": true,
    "likesGot": 1504
   },
@@ -690,7 +690,7 @@
    "following": 45123,
    "ts": "2026-10-15 00:00:00",
    "posts": 1,
-   "likesGiven": 66,
+   "likesGiven": 64,
    "likesGivenRough": true,
    "likesGot": 1249
   },
@@ -699,7 +699,7 @@
    "following": 45615,
    "ts": "2026-10-16 00:00:01",
    "posts": 1,
-   "likesGiven": 80,
+   "likesGiven": 78,
    "likesGivenRough": true,
    "likesGot": 1107
   },
@@ -708,7 +708,7 @@
    "following": 45851,
    "ts": "2026-10-17 00:00:00",
    "posts": 143,
-   "likesGiven": 83,
+   "likesGiven": 79,
    "likesGivenRough": true,
    "likesGot": 1206
   },
@@ -717,7 +717,7 @@
    "following": 46239,
    "ts": "2026-10-18 00:00:04",
    "posts": 1,
-   "likesGiven": 87,
+   "likesGiven": 82,
    "likesGivenRough": true,
    "likesGot": 1106
   },
@@ -726,7 +726,7 @@
    "following": 46597,
    "ts": "2026-10-19 00:00:01",
    "posts": 1,
-   "likesGiven": 97,
+   "likesGiven": 93,
    "likesGivenRough": true,
    "likesGot": 1342
   },
@@ -735,7 +735,7 @@
    "following": 46793,
    "ts": "2026-10-20 00:00:00",
    "posts": 79,
-   "likesGiven": 77,
+   "likesGiven": 70,
    "likesGivenRough": true,
    "likesGot": 1451
   },
@@ -744,7 +744,7 @@
    "following": 47104,
    "ts": "2026-10-21 00:00:02",
    "posts": 1,
-   "likesGiven": 119,
+   "likesGiven": 117,
    "likesGivenRough": true,
    "likesGot": 1241
   },
@@ -760,7 +760,7 @@
    "following": 47392,
    "ts": "2026-10-23 00:00:01",
    "posts": 1,
-   "likesGiven": 231,
+   "likesGiven": 211,
    "likesGivenRough": true,
    "likesGot": 813
   },
@@ -769,7 +769,7 @@
    "following": 47730,
    "ts": "2026-10-24 00:00:01",
    "posts": 1,
-   "likesGiven": 193,
+   "likesGiven": 183,
    "likesGivenRough": true,
    "likesGot": 1116
   },
@@ -778,7 +778,7 @@
    "following": 48313,
    "ts": "2026-10-25 00:00:04",
    "posts": 166,
-   "likesGiven": 334,
+   "likesGiven": 256,
    "likesGivenRough": true,
    "likesGot": 1439
   },
@@ -787,7 +787,7 @@
    "following": 49101,
    "ts": "2026-10-26 00:00:00",
    "posts": 161,
-   "likesGiven": 799,
+   "likesGiven": 437,
    "likesGivenRough": true,
    "likesGot": 1573
   },
@@ -1042,17 +1042,14 @@
    "following": 53123,
    "ts": "2026-11-26 00:00:00",
    "posts": 1,
-   "likesGot": 9
+   "likesGiven": 599,
+   "likesGot": 64
   }
  },
  "rival": {
   "id": "1000002164863223",
   "name": "みえ",
   "hours": {
-   "2026-11-23 00": 52713,
-   "2026-11-23 01": 52713,
-   "2026-11-23 02": 52713,
-   "2026-11-23 03": 52713,
    "2026-11-23 04": 52708,
    "2026-11-23 05": 52708,
    "2026-11-23 06": 52708,
@@ -1121,11 +1118,15 @@
    "2026-11-25 21": 52800,
    "2026-11-25 22": 52811,
    "2026-11-25 23": 52811,
-   "2026-11-26 00": 52851
+   "2026-11-26 00": 52851,
+   "2026-11-26 01": 52853,
+   "2026-11-26 02": 52853,
+   "2026-11-26 03": 52853,
+   "2026-11-26 04": 52848
   },
-  "at": "2026-11-26 00:06",
+  "at": "2026-11-26 04:05",
   "yesterdayText": "昨日まで：差 15,732人（1日で 49人縮まった）",
-  "closeText": "（1日 −94ずつ縮まり中 → 5/13ごろ追いつく）",
-  "rateText": "1日あたり：自分 +160／みえ +66（直近7日）"
+  "closeText": "（1日 −96ずつ縮まり中 → 5/9ごろ追いつく）",
+  "rateText": "1日あたり：自分 +161／みえ +65（直近7日）"
  }
 }
